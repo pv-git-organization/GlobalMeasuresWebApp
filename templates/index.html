@@ -1,30 +1,872 @@
-<!doctype html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>Hello Azure - Python Quickstart</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap/css/bootstrap.min.css') }}">
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-</head>
-<html>
-   <body>
-     <main>
-        <div class="px-4 py-3 my-2 text-center">
-            <img class="d-block mx-auto mb-4" src="{{ url_for('static', filename='images/azure-icon.svg') }}" alt="Azure Logo" width="192" height="192"/>
-            <!-- <img  src="/docs/5.1/assets/brand/bootstrap-logo.svg" alt="" width="72" height="57"> -->
-            <h1 class="display-6 fw-bold text-primary">Welcome to Azure</h1>            
-          </div>
-        <form method="post" action="{{url_for('hello')}}">
-            <div class="col-md-6 mx-auto text-center">
-                <label for="name" class="form-label fw-bold fs-5">Could you please tell me your name?</label>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PVREA Global Measures Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;0,900;1,400&family=Roboto+Slab:wght@300;400;500;700&family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --pv-blue:#005A9C;      /* primary dark blue */
+  --pv-red:#D73647;       /* primary red */
+  --pv-ltblue:#00A8CD;    /* secondary light blue */
+  --pv-gold:#F8991D;      /* secondary gold */
+  --pv-green:#008457;     /* secondary dark green */
+  --pv-ltgreen:#7DB045;   /* secondary light green */
+  --pv-gray:#808285;      /* secondary gray */
+  --met:#008457; --track:#00A8CD; --jeopardy:#F8991D; --off:#D73647; --nodata:#B9BBBD;
+  --ink:#22252a; --line:#e4e6e9; --bg:#f4f6f8; --card:#ffffff;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.05);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:'Roboto',Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg);font-size:14px;line-height:1.45}
+h1,h2,h3,h4,.slab{font-family:'Roboto Slab','Roboto',serif}
+button{font-family:inherit;cursor:pointer}
+.hidden{display:none!important}
 
-                <!-- <p class="lead mb-2">Could you please tell me your name?</p> -->
-                <div class="d-grid gap-2 d-sm-flex justify-content-sm-center align-items-center my-1">
-                    <input type="text" class="form-control" id="name" name="name" style="max-width: 256px;">
-                  </div>            
-                <div class="d-grid gap-2 d-sm-flex justify-content-sm-center my-2">
-                  <button type="submit" class="btn btn-primary btn-lg px-4 gap-3">Say Hello</button>
-                </div>            
-            </div>
-        </form>
-     </main>      
-   </body>
+/* ---------- Header w/ brand angular block ---------- */
+header{position:relative;background:var(--pv-blue);color:#fff;overflow:hidden}
+header .angular{position:absolute;top:0;right:0;height:100%;width:46%;
+  background:linear-gradient(115deg,transparent 0,transparent 38%,var(--pv-ltblue) 38%,var(--pv-ltblue) 55%,var(--pv-green) 55%,var(--pv-green) 70%,var(--pv-gold) 70%);
+  clip-path:polygon(28% 0,100% 0,100% 100%,0 100%);opacity:.9}
+.hd-inner{position:relative;z-index:2;max-width:1400px;margin:0 auto;padding:20px 26px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+.brand-mark{display:flex;align-items:center;gap:16px}
+.pv-logo{background:#fff;padding:8px 14px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.18);display:flex;align-items:center}
+.pv-logo img{height:44px;display:block}
+.hd-title h1{margin:0;font-size:22px;font-weight:700;letter-spacing:.2px}
+.hd-title p{margin:2px 0 0;font-size:12.5px;opacity:.9;font-family:'Roboto'}
+.hd-actions{display:flex;gap:8px;flex-wrap:wrap;z-index:3}
+.hd-actions button{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35);padding:8px 12px;border-radius:6px;font-size:12.5px;font-weight:500;transition:.15s}
+.hd-actions button:hover{background:#fff;color:var(--pv-blue)}
+.ds-bar{position:relative;z-index:3;max-width:1400px;margin:0 auto;padding:0 26px 12px;display:flex;align-items:center;gap:14px}
+.ds-status{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600}
+.ds-dot{width:9px;height:9px;border-radius:50%;background:#808285;box-shadow:0 0 0 3px rgba(255,255,255,.15);transition:.2s}
+.ds-refresh{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35);padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600}
+.ds-refresh:hover{background:#fff;color:var(--pv-blue)}
+
+/* ---------- Controls bar ---------- */
+.controls{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.controls-inner{max-width:1400px;margin:0 auto;padding:12px 26px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.ctl-group{display:flex;align-items:center;gap:8px}
+.ctl-group label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--pv-gray)}
+select{padding:7px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:#fff;color:var(--ink);min-width:110px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid;background:#fff;transition:.12s;user-select:none}
+.chip.on{color:#fff}
+.legend{margin-left:auto;display:flex;gap:14px;align-items:center;font-size:11.5px;flex-wrap:wrap}
+.legend span{display:flex;align-items:center;gap:5px;font-weight:600;color:#555}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block}
+
+/* ---------- Main ---------- */
+main{max-width:1400px;margin:0 auto;padding:22px 26px 60px}
+.summary{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px}
+.scard{background:var(--card);border-radius:10px;padding:16px 18px;box-shadow:var(--shadow);border-top:4px solid;position:relative}
+.scard .num{font-family:'Roboto Slab';font-size:34px;font-weight:700;line-height:1}
+.scard .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--pv-gray);font-weight:700;margin-top:4px}
+.scard .sub{font-size:11px;color:#9a9da1;margin-top:2px}
+
+/* ---------- Pillar sections ---------- */
+.pillar{background:var(--card);border-radius:12px;box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden}
+.pillar-head{padding:12px 18px;color:#fff;display:flex;justify-content:space-between;align-items:center}
+.pillar-head h2{margin:0;font-size:17px;font-weight:700}
+.pillar-head .pmeta{font-size:12px;opacity:.92;font-weight:600;font-family:'Roboto'}
+.measure-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;padding:16px 18px}
+.mcard{border:1px solid var(--line);border-radius:9px;padding:14px;position:relative;transition:.15s;background:#fff;border-left:5px solid var(--nodata)}
+.mcard:hover{box-shadow:0 4px 16px rgba(0,0,0,.09);transform:translateY(-1px)}
+.mcard .mname{font-weight:600;font-size:13.5px;margin-bottom:10px;min-height:36px;line-height:1.3}
+.mcard .vals{display:flex;justify-content:space-between;align-items:flex-end;gap:8px}
+.mcard .actual{font-family:'Roboto Slab';font-size:26px;font-weight:700;line-height:1}
+.mcard .goal{font-size:12px;color:var(--pv-gray);text-align:right}
+.mcard .goal b{display:block;font-size:14px;color:var(--ink);font-family:'Roboto Slab'}
+.pill-row{display:flex;justify-content:flex-end;margin-bottom:8px}
+.status-pill{display:inline-block;max-width:100%;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;border-radius:12px;color:#fff;white-space:nowrap}
+.prog{position:relative;height:8px;border-radius:4px;background:#eef0f2;margin-top:12px;overflow:visible}
+.prog i{display:block;height:100%;border-radius:4px;transition:width .3s ease}
+.prog .pace{position:absolute;top:-2px;bottom:-2px;width:2px;background:#22252a;opacity:.6;border-radius:2px;transform:translateX(-50%);pointer-events:none}
+.trend{margin-top:8px;font-size:11px;color:#8a8d91;display:flex;gap:6px;align-items:center}
+.trend b{font-family:'Roboto Slab'}
+
+/* ---------- Chatbot ---------- */
+#chatFab{position:fixed;bottom:22px;right:22px;z-index:60;width:116px;height:116px;border-radius:50%;background:transparent;color:#fff;border:none;padding:0;box-shadow:0 8px 24px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;overflow:hidden;transition:transform .15s}
+#chatFab img{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none}
+#chatFab:hover{background:transparent;transform:scale(1.06)}
+#chatPanel{position:fixed;bottom:150px;right:22px;z-index:60;width:380px;max-width:calc(100vw - 44px);height:520px;max-height:calc(100vh - 130px);background:#fff;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.28);display:flex;flex-direction:column;overflow:hidden}
+.chat-head{background:var(--pv-blue);color:#fff;padding:13px 16px;display:flex;justify-content:space-between;align-items:center}
+.chat-head b{font-family:'Roboto Slab';font-size:15px}
+.chat-head small{opacity:.85;font-size:11px}
+.chat-head button{background:transparent;border:none;color:#fff;font-size:18px}
+.chat-body{flex:1;overflow-y:auto;padding:14px;background:#f7f9fb;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:85%;padding:9px 12px;border-radius:12px;font-size:13px;line-height:1.4;white-space:pre-wrap}
+.msg.bot{background:#fff;border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:3px}
+.msg.user{background:var(--pv-blue);color:#fff;align-self:flex-end;border-bottom-right-radius:3px}
+.msg.bot table{border-collapse:collapse;margin-top:6px;font-size:11.5px;width:100%}
+.msg.bot td,.msg.bot th{border:1px solid var(--line);padding:3px 6px;text-align:left}
+.msg.bot th{background:#eef2f5}
+.chat-suggest{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px;background:#fff;border-top:1px solid var(--line)}
+.chat-suggest button{font-size:11px;background:#eef2f5;border:1px solid var(--line);border-radius:14px;padding:5px 10px;color:var(--pv-blue);font-weight:600}
+.chat-input{display:flex;border-top:1px solid var(--line);padding:10px}
+.chat-input input{flex:1;border:1px solid var(--line);border-radius:20px;padding:9px 14px;font-size:13px;outline:none}
+.chat-input button{margin-left:8px;background:var(--pv-red);color:#fff;border:none;border-radius:20px;padding:0 16px;font-weight:700}
+
+.footer-note{text-align:center;color:#9a9da1;font-size:11.5px;margin-top:30px}
+/* ---------- Report overlay (fallback when pop-ups are blocked / sandboxed preview) ---------- */
+#reportOverlay{position:fixed;inset:0;z-index:200;background:rgba(20,25,32,.55);display:flex;flex-direction:column;align-items:center;padding:24px;overflow:auto}
+#reportOverlay .ro-toolbar{width:100%;max-width:8.7in;display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px}
+#reportOverlay .ro-toolbar button{border:none;border-radius:6px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer}
+#reportOverlay .ro-print{background:#D73647;color:#fff}
+#reportOverlay .ro-open{background:#005A9C;color:#fff}
+#reportOverlay .ro-close{background:#fff;color:#22252a;border:1px solid #cfd5da!important}
+#reportOverlay .ro-frame{width:100%;max-width:8.7in;flex:1;min-height:70vh;background:#fff;border:none;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+
+@media(max-width:900px){.summary{grid-template-columns:repeat(2,1fr)}}
+@media print{body{background:#fff}.controls,header .hd-actions,#chatFab,#chatPanel{display:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="angular"></div>
+  <div class="hd-inner">
+    <div class="brand-mark">
+      <div class="pv-logo"><img src="logo.jpg" alt="Poudre Valley REA"></div>
+      <div class="hd-title">
+        <h1>Global Measures Scorecard</h1>
+        <p>Strategic performance tracking &middot; 2024&ndash;2030</p>
+      </div>
+    </div>
+    <div class="hd-actions">
+      <button onclick="Report.executive()">&#128202; Executive Report</button>
+      <button onclick="Report.onepage()">&#128196; One-Page</button>
+      <button onclick="Report.concerns()">&#9888;&#65039; Concerns</button>
+      <button onclick="Report.pillar()">&#127942; Pillar Scorecard</button>
+      <button onclick="Report.trend()">&#128200; Year-over-Year</button>
+    </div>
+  </div>
+  <div class="ds-bar">
+    <div id="dsStatus" class="ds-status"><span class="ds-dot"></span><span class="ds-text">Initializing&hellip;</span></div>
+    <button class="ds-refresh" onclick="SP.load(true)" title="Reload from SharePoint">&#8635; Refresh live data</button>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="controls-inner">
+    <div class="ctl-group">
+      <label>Year</label>
+      <select id="yearSel" onchange="App.render()"></select>
+    </div>
+    <div class="ctl-group">
+      <label>Compare</label>
+      <select id="cmpSel" onchange="App.render()">
+        <option value="">Prior year</option>
+      </select>
+    </div>
+    <div class="ctl-group">
+      <label>Status</label>
+      <select id="statusSel" onchange="App.render()">
+        <option value="">All statuses</option>
+        <option value="met">Goal Met</option>
+        <option value="track">Tracking to Meet</option>
+        <option value="jeopardy">In Jeopardy</option>
+        <option value="off">Missed / Off Track</option>
+        <option value="nodata">No Data / Planned</option>
+      </select>
+    </div>
+    <div class="ctl-group">
+      <label>Pillars</label>
+      <div class="chips" id="pillarChips"></div>
+    </div>
+    <div class="legend" id="legend"></div>
+  </div>
+</div>
+
+<main>
+  <div class="summary" id="summary"></div>
+  <div id="pillars"></div>
+  <div class="footer-note" id="footNote"></div>
+</main>
+
+<button id="chatFab" onclick="Chat.toggle()" title="Ask the data"><img src="wattsworth.png" alt="Wattsworth AI Assistant"></button>
+<div id="chatPanel" class="hidden">
+  <div class="chat-head">
+    <div><b>Measures Assistant</b><br><small>Ask me anything about the data</small></div>
+    <button onclick="Chat.toggle()">&times;</button>
+  </div>
+  <div class="chat-body" id="chatBody"></div>
+  <div class="chat-suggest" id="chatSuggest"></div>
+  <div class="chat-input">
+    <input id="chatInput" placeholder="e.g. what's in jeopardy in 2026?" onkeydown="if(event.key==='Enter')Chat.send()">
+    <button onclick="Chat.send()">Send</button>
+  </div>
+</div>
+
+<script>
+/* ============ EMBEDDED DATA (fallback snapshot) ============ */
+const DB_SNAPSHOT = {"sectionOrder":["Top Safety Performance","Exceptional Member Experience","Affordable Service","Utility of the Future","High Performance Culture"],"pillarColors":{"Top Safety Performance":"#00A8CD","Exceptional Member Experience":"#005A9C","Affordable Service":"#7DB045","Utility of the Future":"#D73647","High Performance Culture":"#F8991D"},"years":[2024,2025,2026,2027,2028,2029,2030],"records":[{"section":"Top Safety Performance","measure":"Days Away Restricted Transferred (DART)","year":2024,"actual":"0","goal":"0","color":"#00A8CD","sort":1.0},{"section":"Top Safety Performance","measure":"Rural Electric Safety Achievement Program (RESAP)","year":2026,"actual":null,"goal":"> 3.0","color":"#00A8CD","sort":10.0},{"section":"Utility of the Future","measure":"Virtual Power Plant Total MW's Available","year":2027,"actual":null,"goal":"\u2265 10","color":"#D73647","sort":16.0},{"section":"Utility of the Future","measure":"System Average Interruption Duration Index (SAIDI)","year":2028,"actual":null,"goal":"\u2264 50","color":"#D73647","sort":17.0},{"section":"Utility of the Future","measure":"Consumers Experiencing Multiple Interruptions (% Below CEMI-3)","year":2028,"actual":null,"goal":"\u2265 96%","color":"#D73647","sort":18.0},{"section":"Utility of the Future","measure":"Carbon Free Generation","year":2028,"actual":null,"goal":"\u2265 60%","color":"#D73647","sort":19.0},{"section":"Utility of the Future","measure":"Virtual Power Plant Total MW's Available","year":2028,"actual":null,"goal":"\u2265 12","color":"#D73647","sort":20.0},{"section":"Utility of the Future","measure":"System Average Interruption Duration Index (SAIDI)","year":2029,"actual":null,"goal":"\u2264 50","color":"#D73647","sort":21.0},{"section":"Utility of the Future","measure":"Consumers Experiencing Multiple Interruptions (% Below CEMI-3)","year":2029,"actual":null,"goal":"\u2265 97%","color":"#D73647","sort":22.0},{"section":"Utility of the Future","measure":"Carbon Free Generation","year":2029,"actual":null,"goal":"\u2265 60%","color":"#D73647","sort":23.0},{"section":"Utility of the Future","measure":"Virtual Power Plant Total MW's Available","year":2029,"actual":null,"goal":"\u2265 16","color":"#D73647","sort":24.0},{"section":"Utility of the Future","measure":"System Average Interruption Duration Index (SAIDI)","year":2030,"actual":null,"goal":"\u2264 50","color":"#D73647","sort":25.0},{"section":"Top Safety Performance","measure":"Qualified Field Observer Inspections (Business, After Hours)","year":2026,"actual":"107, 22","goal":"\u2265 150 , \u226525","color":"#00A8CD","sort":11.0},{"section":"Utility of the Future","measure":"Consumers Experiencing Multiple Interruptions (% Below CEMI-3)","year":2030,"actual":null,"goal":"\u2265 98%","color":"#D73647","sort":26.0},{"section":"Utility of the Future","measure":"Carbon Free Generation","year":2030,"actual":null,"goal":"\u2265 80%","color":"#D73647","sort":27.0},{"section":"Utility of the Future","measure":"Virtual Power Plant Total MW's Available","year":2030,"actual":null,"goal":"\u2265 20","color":"#D73647","sort":28.0},{"section":"High Performance Culture","measure":"Active Career Development Plans","year":2024,"actual":"0.076","goal":"\u2265 5%","color":"#F8991D","sort":1.0},{"section":"High Performance Culture","measure":"Workforce Development","year":2024,"actual":"1","goal":"1","color":"#F8991D","sort":2.0},{"section":"High Performance Culture","measure":"Total Wellness Engagement (% Funded)","year":2024,"actual":"0.75","goal":"\u2265 75%","color":"#F8991D","sort":3.0},{"section":"High Performance Culture","measure":"Security Awareness Proficiency - out of 100","year":2024,"actual":"0.78","goal":"\u2265 75%","color":"#F8991D","sort":4.0},{"section":"High Performance Culture","measure":"Active Career Development Plans","year":2025,"actual":"0.076","goal":"\u2265 7%","color":"#F8991D","sort":5.0},{"section":"High Performance Culture","measure":"Workforce Development","year":2025,"actual":"1","goal":"1","color":"#F8991D","sort":6.0},{"section":"High Performance Culture","measure":"Total Wellness Engagement (% Funded)","year":2025,"actual":"0.745","goal":"\u2265 80%","color":"#F8991D","sort":7.0},{"section":"Top Safety Performance","measure":"Community Safety Presentations","year":2026,"actual":"25","goal":"\u2265 25","color":"#00A8CD","sort":12.0},{"section":"High Performance Culture","measure":"Security Awareness Proficiency - out of 100","year":2025,"actual":"0.82","goal":"\u2265 79%","color":"#F8991D","sort":8.0},{"section":"High Performance Culture","measure":"Active Career Development Plans","year":2026,"actual":"0.053","goal":"\u2265 7%","color":"#F8991D","sort":9.0},{"section":"High Performance Culture","measure":"Workforce Development","year":2026,"actual":"0.6678","goal":"1","color":"#F8991D","sort":10.0},{"section":"High Performance Culture","measure":"Total Wellness Engagement (% Funded)","year":2026,"actual":"0.427","goal":"\u2265 80%","color":"#F8991D","sort":11.0},{"section":"High Performance Culture","measure":"Security Awareness Proficiency - out of 100","year":2026,"actual":"0.81","goal":"\u2265 82%","color":"#F8991D","sort":12.0},{"section":"High Performance Culture","measure":"Active Career Development Plans","year":2027,"actual":null,"goal":"\u2265 7%","color":"#F8991D","sort":13.0},{"section":"High Performance Culture","measure":"Workforce Development","year":2027,"actual":null,"goal":"1","color":"#F8991D","sort":14.0},{"section":"High Performance Culture","measure":"Total Wellness Engagement (% Funded)","year":2027,"actual":null,"goal":"\u2265 80%","color":"#F8991D","sort":15.0},{"section":"High Performance Culture","measure":"Security Awareness Proficiency - out of 100","year":2027,"actual":null,"goal":"\u2265 82%","color":"#F8991D","sort":16.0},{"section":"High Performance Culture","measure":"Active Career Development Plans","year":2028,"actual":null,"goal":"\u2265 7%","color":"#F8991D","sort":17.0},{"section":"Top Safety Performance","measure":"Days Away Restricted Transferred (DART)","year":2027,"actual":null,"goal":"0","color":"#00A8CD","sort":13.0},{"section":"High Performance Culture","measure":"Workforce Development","year":2028,"actual":null,"goal":"1","color":"#F8991D","sort":18.0},{"section":"High Performance Culture","measure":"Total Wellness Engagement (% Funded)","year":2028,"actual":null,"goal":"\u2265 85%","color":"#F8991D","sort":19.0},{"section":"High Performance Culture","measure":"Security Awareness Proficiency - out of 100","year":2028,"actual":null,"goal":"\u2265 84%","color":"#F8991D","sort":20.0},{"section":"High Performance Culture","measure":"Active Career Development Plans","year":2029,"actual":null,"goal":"\u2265 7%","color":"#F8991D","sort":21.0},{"section":"High Performance Culture","measure":"Workforce Development","year":2029,"actual":null,"goal":"1","color":"#F8991D","sort":22.0},{"section":"High Performance Culture","measure":"Total Wellness Engagement (% Funded)","year":2029,"actual":null,"goal":"\u2265 85%","color":"#F8991D","sort":23.0},{"section":"High Performance Culture","measure":"Security Awareness Proficiency - out of 100","year":2029,"actual":null,"goal":"\u2265 86%","color":"#F8991D","sort":24.0},{"section":"High Performance Culture","measure":"Active Career Development Plans","year":2030,"actual":null,"goal":"\u2265 7%","color":"#F8991D","sort":25.0},{"section":"High Performance Culture","measure":"Workforce Development","year":2030,"actual":null,"goal":"1","color":"#F8991D","sort":26.0},{"section":"High Performance Culture","measure":"Total Wellness Engagement (% Funded)","year":2030,"actual":null,"goal":"\u2265 85%","color":"#F8991D","sort":27.0},{"section":"Top Safety Performance","measure":"Rural Electric Safety Achievement Program (RESAP)","year":2027,"actual":null,"goal":"> 3.0","color":"#00A8CD","sort":14.0},{"section":"High Performance Culture","measure":"Security Awareness Proficiency - out of 100","year":2030,"actual":null,"goal":"\u2265 88%","color":"#F8991D","sort":28.0},{"section":"Top Safety Performance","measure":"Qualified Field Observer Inspections (Business, After Hours)","year":2027,"actual":null,"goal":"\u2265 150 , \u226525","color":"#00A8CD","sort":15.0},{"section":"Top Safety Performance","measure":"Community Safety Presentations","year":2027,"actual":null,"goal":"\u2265 25","color":"#00A8CD","sort":16.0},{"section":"Top Safety Performance","measure":"Days Away Restricted Transferred (DART)","year":2028,"actual":null,"goal":"0","color":"#00A8CD","sort":17.0},{"section":"Top Safety Performance","measure":"Rural Electric Safety Achievement Program (RESAP)","year":2028,"actual":null,"goal":"> 3.0","color":"#00A8CD","sort":18.0},{"section":"Top Safety Performance","measure":"Qualified Field Observer Inspections (Business, After Hours)","year":2028,"actual":null,"goal":"\u2265 150 , \u226525","color":"#00A8CD","sort":19.0},{"section":"Top Safety Performance","measure":"Rural Electric Safety Achievement Program (RESAP)","year":2024,"actual":"-","goal":"> 3.0","color":"#00A8CD","sort":2.0},{"section":"Top Safety Performance","measure":"Community Safety Presentations","year":2028,"actual":null,"goal":"\u2265 25","color":"#00A8CD","sort":20.0},{"section":"Top Safety Performance","measure":"Days Away Restricted Transferred (DART)","year":2029,"actual":null,"goal":"0","color":"#00A8CD","sort":21.0},{"section":"Top Safety Performance","measure":"Rural Electric Safety Achievement Program (RESAP)","year":2029,"actual":null,"goal":"> 3.0","color":"#00A8CD","sort":22.0},{"section":"Top Safety Performance","measure":"Qualified Field Observer Inspections (Business, After Hours)","year":2029,"actual":null,"goal":"\u2265 150 , \u226525","color":"#00A8CD","sort":23.0},{"section":"Top Safety Performance","measure":"Community Safety Presentations","year":2029,"actual":null,"goal":"\u2265 25","color":"#00A8CD","sort":24.0},{"section":"Top Safety Performance","measure":"Days Away Restricted Transferred (DART)","year":2030,"actual":null,"goal":"0","color":"#00A8CD","sort":25.0},{"section":"Top Safety Performance","measure":"Rural Electric Safety Achievement Program (RESAP)","year":2030,"actual":null,"goal":"> 3.0","color":"#00A8CD","sort":26.0},{"section":"Top Safety Performance","measure":"Qualified Field Observer Inspections (Business, After Hours)","year":2030,"actual":null,"goal":"\u2265 150 , \u226525","color":"#00A8CD","sort":27.0},{"section":"Top Safety Performance","measure":"Community Safety Presentations","year":2030,"actual":null,"goal":"\u2265 25","color":"#00A8CD","sort":28.0},{"section":"Exceptional Member Experience","measure":"American Customer Satisfaction Index (ACSI) - out of 100","year":2024,"actual":"90","goal":"\u2265 89","color":"#005A9C","sort":1.0},{"section":"Top Safety Performance","measure":"Qualified Field Observer Inspections (Business, After Hours)","year":2024,"actual":"174 , 29","goal":"\u2265 150 , \u226525","color":"#00A8CD","sort":3.0},{"section":"Exceptional Member Experience","measure":"Membership Loyalty Index - out of 100","year":2024,"actual":"91","goal":"\u2265 88","color":"#005A9C","sort":2.0},{"section":"Exceptional Member Experience","measure":"Co-op Voices Advocates","year":2024,"actual":"850","goal":"\u2265 850","color":"#005A9C","sort":3.0},{"section":"Exceptional Member Experience","measure":"Follow Up Survey Index - out of 5","year":2024,"actual":"4.18","goal":"\u2265 4.0","color":"#005A9C","sort":4.0},{"section":"Exceptional Member Experience","measure":"American Customer Satisfaction Index (ACSI) - out of 100","year":2025,"actual":"90","goal":"\u2265 90","color":"#005A9C","sort":1.0},{"section":"Exceptional Member Experience","measure":"Membership Loyalty Index - out of 100","year":2025,"actual":"91","goal":"\u2265 90","color":"#005A9C","sort":2.0},{"section":"Exceptional Member Experience","measure":"Co-op Voices Advocates","year":2025,"actual":"1096","goal":"\u2265 1,125","color":"#005A9C","sort":7.0},{"section":"Exceptional Member Experience","measure":"Follow Up Survey Index - out of 5","year":2025,"actual":"4.32","goal":"\u2265 4.1","color":"#005A9C","sort":8.0},{"section":"Exceptional Member Experience","measure":"American Customer Satisfaction Index (ACSI) - out of 100","year":2026,"actual":"92","goal":"\u2265 90","color":"#005A9C","sort":9.0},{"section":"Exceptional Member Experience","measure":"Membership Loyalty Index - out of 100","year":2026,"actual":"91","goal":"\u2265 90","color":"#005A9C","sort":10.0},{"section":"Exceptional Member Experience","measure":"Co-op Voices Advocates","year":2026,"actual":"1554","goal":"\u2265 1,400","color":"#005A9C","sort":11.0},{"section":"Top Safety Performance","measure":"Community Safety Presentations","year":2024,"actual":"27","goal":"\u2265 25","color":"#00A8CD","sort":4.0},{"section":"Exceptional Member Experience","measure":"Follow Up Survey Index - out of 5","year":2026,"actual":"4.34","goal":"\u2265 4.2","color":"#005A9C","sort":12.0},{"section":"Exceptional Member Experience","measure":"American Customer Satisfaction Index (ACSI) - out of 100","year":2027,"actual":null,"goal":"\u2265 90","color":"#005A9C","sort":13.0},{"section":"Exceptional Member Experience","measure":"Membership Loyalty Index - out of 100","year":2027,"actual":null,"goal":"\u2265 90","color":"#005A9C","sort":14.0},{"section":"Exceptional Member Experience","measure":"Co-op Voices Advocates","year":2027,"actual":null,"goal":"\u2265 1,675","color":"#005A9C","sort":15.0},{"section":"Exceptional Member Experience","measure":"Follow Up Survey Index - out of 5","year":2027,"actual":null,"goal":"\u2265 4.3","color":"#005A9C","sort":16.0},{"section":"Exceptional Member Experience","measure":"American Customer Satisfaction Index (ACSI) - out of 100","year":2028,"actual":null,"goal":"\u2265 90","color":"#005A9C","sort":17.0},{"section":"Exceptional Member Experience","measure":"Membership Loyalty Index - out of 100","year":2028,"actual":null,"goal":"\u2265 90","color":"#005A9C","sort":18.0},{"section":"Exceptional Member Experience","measure":"Co-op Voices Advocates","year":2028,"actual":null,"goal":"\u2265 1,950","color":"#005A9C","sort":19.0},{"section":"Exceptional Member Experience","measure":"Follow Up Survey Index - out of 5","year":2028,"actual":null,"goal":"\u2265 4.4","color":"#005A9C","sort":20.0},{"section":"Exceptional Member Experience","measure":"American Customer Satisfaction Index (ACSI) - out of 100","year":2029,"actual":null,"goal":"\u2265 90","color":"#005A9C","sort":21.0},{"section":"Top Safety Performance","measure":"Days Away Restricted Transferred (DART)","year":2025,"actual":"3.36","goal":"0","color":"#00A8CD","sort":5.0},{"section":"Exceptional Member Experience","measure":"Membership Loyalty Index - out of 100","year":2029,"actual":null,"goal":"\u2265 90","color":"#005A9C","sort":22.0},{"section":"Exceptional Member Experience","measure":"Co-op Voices Advocates","year":2029,"actual":null,"goal":"\u2265 2,225","color":"#005A9C","sort":23.0},{"section":"Exceptional Member Experience","measure":"Follow Up Survey Index - out of 5","year":2029,"actual":null,"goal":"\u2265 4.5","color":"#005A9C","sort":24.0},{"section":"Exceptional Member Experience","measure":"American Customer Satisfaction Index (ACSI) - out of 100","year":2030,"actual":null,"goal":"\u2265 90","color":"#005A9C","sort":25.0},{"section":"Exceptional Member Experience","measure":"Membership Loyalty Index - out of 100","year":2030,"actual":null,"goal":"\u2265 90","color":"#005A9C","sort":26.0},{"section":"Exceptional Member Experience","measure":"Co-op Voices Advocates","year":2030,"actual":null,"goal":"\u2265 2,500","color":"#005A9C","sort":27.0},{"section":"Exceptional Member Experience","measure":"Follow Up Survey Index - out of 5","year":2030,"actual":null,"goal":"\u2265 4.5","color":"#005A9C","sort":28.0},{"section":"Affordable Service","measure":"Controllable Expense Per Consumer - Compared to Nation","year":2024,"actual":"0.0764","goal":"< 10%","color":"#7DB045","sort":1.0},{"section":"Affordable Service","measure":"Power Cost as a % of Revenue","year":2024,"actual":"0.7691","goal":"> 77%","color":"#7DB045","sort":2.0},{"section":"Affordable Service","measure":"Average Consumer per Employee - Compared to Nation","year":2024,"actual":"0.029","goal":"< 5%","color":"#7DB045","sort":3.0},{"section":"Top Safety Performance","measure":"Rural Electric Safety Achievement Program (RESAP)","year":2025,"actual":"3.1","goal":"> 3.0","color":"#00A8CD","sort":6.0},{"section":"Affordable Service","measure":"Rates - Measured by Quartile Compared to Colorado","year":2024,"actual":"1st","goal":"1st","color":"#7DB045","sort":4.0},{"section":"Affordable Service","measure":"Controllable Expense Per Consumer - Compared to Nation","year":2025,"actual":"0.0434","goal":"< 10%","color":"#7DB045","sort":5.0},{"section":"Affordable Service","measure":"Power Cost as a % of Revenue","year":2025,"actual":"0.79","goal":"> 77%","color":"#7DB045","sort":6.0},{"section":"Affordable Service","measure":"Average Consumer per Employee - Compared to Nation","year":2025,"actual":"0.03","goal":"< 5%","color":"#7DB045","sort":7.0},{"section":"Affordable Service","measure":"Rates - Measured by Quartile Compared to Colorado","year":2025,"actual":"1st","goal":"1st","color":"#7DB045","sort":8.0},{"section":"Affordable Service","measure":"Controllable Expense Per Consumer - Compared to Nation","year":2026,"actual":"0.065","goal":"< 10%","color":"#7DB045","sort":9.0},{"section":"Affordable Service","measure":"Power Cost as a % of Revenue","year":2026,"actual":"0.7855","goal":"> 77%","color":"#7DB045","sort":10.0},{"section":"Affordable Service","measure":"Average Consumer per Employee - Compared to Nation","year":2026,"actual":"0.0258","goal":"< 5%","color":"#7DB045","sort":11.0},{"section":"Affordable Service","measure":"Rates - Measured by Quartile Compared to Colorado","year":2026,"actual":"1st","goal":"1st","color":"#7DB045","sort":12.0},{"section":"Affordable Service","measure":"Controllable Expense Per Consumer - Compared to Nation","year":2027,"actual":null,"goal":"< 10%","color":"#7DB045","sort":13.0},{"section":"Top Safety Performance","measure":"Qualified Field Observer Inspections (Business, After Hours)","year":2025,"actual":"159 , 26","goal":"\u2265 150 , \u226525","color":"#00A8CD","sort":7.0},{"section":"Affordable Service","measure":"Power Cost as a % of Revenue","year":2027,"actual":null,"goal":"> 77%","color":"#7DB045","sort":14.0},{"section":"Affordable Service","measure":"Average Consumer per Employee - Compared to Nation","year":2027,"actual":null,"goal":"< 5.0%","color":"#7DB045","sort":15.0},{"section":"Affordable Service","measure":"Rates - Measured by Quartile Compared to Colorado","year":2027,"actual":null,"goal":"1st","color":"#7DB045","sort":16.0},{"section":"Affordable Service","measure":"Controllable Expense Per Consumer - Compared to Nation","year":2028,"actual":null,"goal":"< 10%","color":"#7DB045","sort":17.0},{"section":"Affordable Service","measure":"Power Cost as a % of Revenue","year":2028,"actual":null,"goal":"> 77%","color":"#7DB045","sort":18.0},{"section":"Affordable Service","measure":"Average Consumer per Employee - Compared to Nation","year":2028,"actual":null,"goal":"< 5.0%","color":"#7DB045","sort":19.0},{"section":"Affordable Service","measure":"Rates - Measured by Quartile Compared to Colorado","year":2028,"actual":null,"goal":"1st","color":"#7DB045","sort":20.0},{"section":"Affordable Service","measure":"Controllable Expense Per Consumer - Compared to Nation","year":2029,"actual":null,"goal":"< 10%","color":"#7DB045","sort":21.0},{"section":"Affordable Service","measure":"Power Cost as a % of Revenue","year":2029,"actual":null,"goal":"> 77%","color":"#7DB045","sort":22.0},{"section":"Affordable Service","measure":"Average Consumer per Employee - Compared to Nation","year":2029,"actual":null,"goal":"< 5.0%","color":"#7DB045","sort":23.0},{"section":"Top Safety Performance","measure":"Community Safety Presentations","year":2025,"actual":"29","goal":"\u2265 25","color":"#00A8CD","sort":8.0},{"section":"Affordable Service","measure":"Rates - Measured by Quartile Compared to Colorado","year":2029,"actual":null,"goal":"1st","color":"#7DB045","sort":24.0},{"section":"Affordable Service","measure":"Controllable Expense Per Consumer - Compared to Nation","year":2030,"actual":null,"goal":"< 10%","color":"#7DB045","sort":25.0},{"section":"Affordable Service","measure":"Power Cost as a % of Revenue","year":2030,"actual":null,"goal":"> 77%","color":"#7DB045","sort":26.0},{"section":"Affordable Service","measure":"Average Consumer per Employee - Compared to Nation","year":2030,"actual":null,"goal":"< 5.0%","color":"#7DB045","sort":27.0},{"section":"Affordable Service","measure":"Rates - Measured by Quartile Compared to Colorado","year":2030,"actual":null,"goal":"1st","color":"#7DB045","sort":28.0},{"section":"Utility of the Future","measure":"System Average Interruption Duration Index (SAIDI)","year":2024,"actual":"74.22","goal":"\u2264 50","color":"#D73647","sort":1.0},{"section":"Utility of the Future","measure":"Consumers Experiencing Multiple Interruptions (% Below CEMI-3)","year":2024,"actual":"0.9347","goal":"\u2265 92%","color":"#D73647","sort":2.0},{"section":"Utility of the Future","measure":"Carbon Free Generation","year":2024,"actual":"0.35","goal":"\u2265 35%","color":"#D73647","sort":3.0},{"section":"Utility of the Future","measure":"Virtual Power Plant Total MW's Available","year":2024,"actual":"2.62","goal":"\u2265 2","color":"#D73647","sort":4.0},{"section":"Utility of the Future","measure":"System Average Interruption Duration Index (SAIDI)","year":2025,"actual":"48.5","goal":"\u2264 50","color":"#D73647","sort":5.0},{"section":"Top Safety Performance","measure":"Days Away Restricted Transferred (DART)","year":2026,"actual":"1.14","goal":"0","color":"#00A8CD","sort":9.0},{"section":"Utility of the Future","measure":"Consumers Experiencing Multiple Interruptions (% Below CEMI-3)","year":2025,"actual":"0.9745","goal":"\u2265 93%","color":"#D73647","sort":6.0},{"section":"Utility of the Future","measure":"Carbon Free Generation","year":2025,"actual":"0.35","goal":"\u2265 50%","color":"#D73647","sort":7.0},{"section":"Utility of the Future","measure":"Virtual Power Plant Total MW's Available","year":2025,"actual":"5.18","goal":"\u2265 4","color":"#D73647","sort":8.0},{"section":"Utility of the Future","measure":"System Average Interruption Duration Index (SAIDI)","year":2026,"actual":"26.9","goal":"\u2264 50","color":"#D73647","sort":9.0},{"section":"Utility of the Future","measure":"Consumers Experiencing Multiple Interruptions (% Below CEMI-3)","year":2026,"actual":"0.9822","goal":"\u2265 94%","color":"#D73647","sort":10.0},{"section":"Utility of the Future","measure":"Carbon Free Generation","year":2026,"actual":"0.5","goal":"\u2265 50%","color":"#D73647","sort":11.0},{"section":"Utility of the Future","measure":"Virtual Power Plant Total MW's Available","year":2026,"actual":"6.9","goal":"\u2265 8","color":"#D73647","sort":12.0},{"section":"Utility of the Future","measure":"System Average Interruption Duration Index (SAIDI)","year":2027,"actual":null,"goal":"\u2264 50","color":"#D73647","sort":13.0},{"section":"Utility of the Future","measure":"Consumers Experiencing Multiple Interruptions (% Below CEMI-3)","year":2027,"actual":null,"goal":"\u2265 95%","color":"#D73647","sort":14.0},{"section":"Utility of the Future","measure":"Carbon Free Generation","year":2027,"actual":null,"goal":"\u2265 50%","color":"#D73647","sort":15.0}]};
+let DB = DB_SNAPSHOT;  // swapped to live data when SharePoint fetch succeeds
+
+/* ============ STATUS ENGINE ============ */
+const Engine = (function(){
+  const STATUS = {
+    met:     {key:'met',      label:'Goal Met',          color:'var(--met)',      hex:'#008457'},
+    track:   {key:'track',    label:'Tracking to Meet',  color:'var(--track)',    hex:'#00A8CD'},
+    jeopardy:{key:'jeopardy', label:'In Jeopardy',       color:'var(--jeopardy)', hex:'#F8991D'},
+    off:     {key:'off',      label:'Missed / Off Track',color:'var(--off)',      hex:'#D73647'},
+    nodata:  {key:'nodata',   label:'No Data / Planned', color:'var(--nodata)',   hex:'#B9BBBD'}
+  };
+  function parseNum(s){
+    if(s==null) return null;
+    s=String(s).trim();
+    if(/\d(st|nd|rd|th)\b/i.test(s)) return {ordinal:s.toLowerCase()};
+    const first=s.split(',')[0];
+    const pct=/%/.test(first);
+    const n=parseFloat(first.replace(/[^0-9.\-]/g,''));
+    if(isNaN(n)) return null;
+    return {value:n,pct};
+  }
+  function parseGoal(g){
+    if(g==null) return null;
+    g=String(g).trim();
+    if(/\d(st|nd|rd|th)\b/i.test(g)) return {ordinal:g.toLowerCase(),op:'='};
+    let op='>=';
+    if(/^≤|<=/.test(g)) op='<=';
+    else if(/^</.test(g)) op='<';
+    else if(/^≥|>=/.test(g)) op='>=';
+    else if(/^>/.test(g)) op='>';
+    else op='none';
+    const first=g.split(',')[0];
+    const pct=/%/.test(first);
+    const n=parseFloat(first.replace(/[^0-9.\-]/g,''));
+    if(isNaN(n)) return null;
+    return {value:n,op,pct};
+  }
+  /* ---- time-of-year context ---- */
+  const NOW = new Date();
+  function yearFraction(year){
+    // Fraction of the given calendar year elapsed as of today.
+    // Past years = 1 (complete); future years = 0 (not started); current year = elapsed %.
+    const y = NOW.getFullYear();
+    if(year < y) return 1;
+    if(year > y) return 0;
+    const start = new Date(year,0,1), end = new Date(year+1,0,1);
+    return Math.max(0, Math.min(1, (NOW - start)/(end - start)));
+  }
+  // Cumulative "count up over the year" measures should be judged against pace-to-date
+  // (not the full-year target) while the year is still in progress.
+  function isCumulative(measure){
+    return /inspection|presentation|advocate/i.test(String(measure||''));
+  }
+  function paceStatus(ratio, paceRatio){
+    // ratio = attainment vs full-year goal; paceRatio = attainment vs expected-to-date
+    if(ratio>=1) return STATUS.met;
+    return paceRatio>=0.95?STATUS.track : paceRatio>=0.75?STATUS.jeopardy : STATUS.off;
+  }
+  function evaluate(rec){
+    const a=parseNum(rec.actual), g=parseGoal(rec.goal);
+    if(a==null||g==null) return {status:STATUS.nodata,pct:null,pace:null};
+    // ordinal comparison
+    if(a.ordinal||g.ordinal){
+      const ok = a.ordinal && g.ordinal && a.ordinal===g.ordinal;
+      return {status: ok?STATUS.met:STATUS.off, pct: ok?1:0, pace:null};
+    }
+    let av=a.value, gv=g.value, op=g.op;
+    // normalise percent stored as decimal
+    if(g.pct && av<=1.5 && av>0 && gv>1) av=av*100;
+    // determine direction
+    let lowerBetter = (op==='<='||op==='<');
+    if(op==='none'){ lowerBetter = (gv===0); }
+    const yf = yearFraction(rec.year);
+    const inProgress = yf>0 && yf<1;              // this year is currently underway
+    let ratio, ok;
+    if(gv===0){
+      ok = av<=0.0001;
+      return {status: ok?STATUS.met:STATUS.off, pct: ok?1:0, pace:null, disp:{av,gv}};
+    }
+    if(lowerBetter){
+      ratio = av/gv; ok = av<=gv;
+      let st = ok?STATUS.met : ratio<=1.15?STATUS.track : ratio<=1.35?STATUS.jeopardy : STATUS.off;
+      // Progress bar: full when comfortably under the cap, draining toward 0 at ~2x the cap.
+      let pct = ok ? 1 : Math.max(0, Math.min(1, 2-ratio));
+      return {status:st, pct, ratio, pace:null, disp:{av,gv}};
+    } else {
+      ratio = av/gv; ok = av>=gv;
+      if(inProgress && isCumulative(rec.measure)){
+        // Judge cumulative counts against the pace they *should* be at by today.
+        const paceRatio = ratio/(yf||1);
+        const st = paceStatus(ratio, paceRatio);
+        return {status:st, pct: Math.max(0,Math.min(1,ratio)), ratio, pace: Math.max(0,Math.min(1,yf)), paceRatio, disp:{av,gv}};
+      }
+      let st = ok?STATUS.met : ratio>=0.9?STATUS.track : ratio>=0.75?STATUS.jeopardy : STATUS.off;
+      return {status:st, pct: Math.max(0,Math.min(1,ratio)), ratio, pace:null, disp:{av,gv}};
+    }
+  }
+  // Wrap evaluate so EVERY measured bar exposes a tick position:
+  //  - cumulative goals mid-year -> pro-rated "expected pace" tick (set inside evaluate)
+  //  - everything else with data  -> a "goal line" tick at 100%
+  function evaluateWithTick(rec){
+    const ev = evaluate(rec);
+    if(ev.pct!=null){
+      if(ev.pace==null){ ev.pace = 1; ev.paceKind = 'goal'; }
+      else { ev.paceKind = 'pace'; }
+    }
+    return ev;
+  }
+  return {evaluate:evaluateWithTick,STATUS,parseNum,parseGoal};
+})();
+
+/* ============ DATA HELPERS ============ */
+function recFor(measure,year){ return DB.records.find(r=>r.measure===measure&&r.year===year); }
+function measuresIn(section){ const s=new Set(); DB.records.filter(r=>r.section===section).forEach(r=>s.add(r.measure)); return [...s]; }
+function fmtActual(rec){
+  if(rec.actual==null) return '&mdash;';
+  const a=Engine.parseNum(rec.actual);
+  if(a&&a.pct && a.value<=1.5){ return (a.value*100).toFixed(1).replace(/\.0$/,'')+'%'; }
+  return rec.actual;
+}
+
+/* ============ APP / RENDER ============ */
+const App=(function(){
+  let activePillars=new Set(DB.sectionOrder);
+  function latestYearWithData(){
+    let best=null;
+    DB.records.forEach(r=>{ if(r.actual!=null){ if(best==null||r.year>best) best=r.year; } });
+    return best!=null?best:DB.years[DB.years.length-1];
+  }
+  function rebuildYears(){
+    const ys=document.getElementById('yearSel'), cs=document.getElementById('cmpSel');
+    const prevY=ys.value, prevC=cs.value;
+    ys.innerHTML=''; cs.innerHTML='<option value="">Prior year</option>';
+    DB.years.forEach(y=>{ ys.innerHTML+=`<option value="${y}">${y}</option>`; });
+    DB.years.forEach(y=>{ cs.innerHTML+=`<option value="${y}">${y}</option>`; });
+    // preserve prior selection if still valid, else default to latest year with actuals
+    ys.value = (prevY && DB.years.includes(parseInt(prevY))) ? prevY : latestYearWithData();
+    if(prevC && DB.years.includes(parseInt(prevC))) cs.value=prevC;
+  }
+  function reload(){ rebuildYears(); render(); }
+  function initControls(){
+    rebuildYears();
+    // chips
+    const cc=document.getElementById('pillarChips');
+    DB.sectionOrder.forEach(s=>{
+      const c=DB.pillarColors[s];
+      const el=document.createElement('div');
+      el.className='chip on'; el.textContent=s.replace('Performance','Perf.');
+      el.style.borderColor=c; el.style.background=c;
+      el.onclick=()=>{ if(activePillars.has(s)){activePillars.delete(s);el.classList.remove('on');el.style.background='#fff';el.style.color=c;} else {activePillars.add(s);el.classList.add('on');el.style.background=c;el.style.color='#fff';} render(); };
+      cc.appendChild(el);
+    });
+    // legend
+    const lg=document.getElementById('legend');
+    Object.values(Engine.STATUS).forEach(s=>{ lg.innerHTML+=`<span><i class="dot" style="background:${s.hex}"></i>${s.label}</span>`; });
+  }
+  function currentYear(){ return parseInt(document.getElementById('yearSel').value); }
+  function compareYear(){ const v=document.getElementById('cmpSel').value; return v?parseInt(v):currentYear()-1; }
+  function render(){
+    const year=currentYear(), cmp=compareYear(), stFilter=document.getElementById('statusSel').value;
+    // summary counts
+    const counts={met:0,track:0,jeopardy:0,off:0,nodata:0};
+    const rows=[];
+    DB.sectionOrder.filter(s=>activePillars.has(s)).forEach(sec=>{
+      measuresIn(sec).forEach(m=>{
+        const r=recFor(m,year); if(!r)return;
+        const ev=Engine.evaluate(r);
+        counts[ev.status.key]++;
+        rows.push({sec,m,r,ev});
+      });
+    });
+    renderSummary(counts,year);
+    // pillars
+    const wrap=document.getElementById('pillars'); wrap.innerHTML='';
+    DB.sectionOrder.filter(s=>activePillars.has(s)).forEach(sec=>{
+      const c=DB.pillarColors[sec];
+      let cards='';
+      let shown=0, secCounts={met:0,track:0,jeopardy:0,off:0,nodata:0};
+      measuresIn(sec).forEach(m=>{
+        const r=recFor(m,year); if(!r)return;
+        const ev=Engine.evaluate(r); secCounts[ev.status.key]++;
+        if(stFilter && ev.status.key!==stFilter) return;
+        shown++;
+        const cr=recFor(m,cmp);
+        let trend='';
+        if(cr&&cr.actual!=null&&r.actual!=null){
+          const pa=Engine.parseNum(r.actual), pb=Engine.parseNum(cr.actual);
+          if(pa&&pb&&pa.value!=null&&pb.value!=null){
+            const diff=pa.value-pb.value;
+            const arrow=diff>0?'&#9650;':diff<0?'&#9660;':'&#9644;';
+            trend=`<div class="trend">${arrow} vs ${cmp}: <b>${cr.actual}</b></div>`;
+          }
+        }
+        cards+=`<div class="mcard" style="border-left-color:${ev.status.hex}">
+          <div class="mname">${m}</div>
+          <div class="pill-row"><span class="status-pill" style="background:${ev.status.hex}">${ev.status.label}</span></div>
+          <div class="vals">
+            <div><div style="font-size:10px;color:#9a9da1;text-transform:uppercase;letter-spacing:.5px;font-weight:700">Current</div>
+              <div class="actual" style="color:${ev.status.hex}">${fmtActual(r)}</div></div>
+            <div class="goal">Goal<b>${r.goal||'&mdash;'}</b></div>
+          </div>
+          <div class="prog" title="${ev.pct!=null?Math.round(ev.pct*100)+'% of goal':'No data'}${ev.pace!=null?(ev.paceKind==='pace'?' · expected '+Math.round(ev.pace*100)+'% by today':' · tick = goal line'):''}"><i style="width:${ev.pct!=null?Math.round(ev.pct*100):0}%;background:${ev.status.hex}"></i>${ev.pace!=null?`<span class="pace" style="left:${Math.round(ev.pace*100)}%" title="${ev.paceKind==='pace'?'Expected pace by today ('+Math.round(ev.pace*100)+'%)':'Goal line (100%)'}"></span>`:''}</div>
+          ${trend}
+        </div>`;
+      });
+      if(stFilter && shown===0) return;
+      const total=measuresIn(sec).length;
+      wrap.innerHTML+=`<div class="pillar">
+        <div class="pillar-head" style="background:${c}">
+          <h2>${sec}</h2>
+          <div class="pmeta">${secCounts.met} met &middot; ${secCounts.track} tracking &middot; ${secCounts.jeopardy+secCounts.off} at risk</div>
+        </div>
+        <div class="measure-grid">${cards}</div>
+      </div>`;
+    });
+    const asOf=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    const tickNote = year===new Date().getFullYear()
+      ? ` &middot; The &#9474; tick marks expected pace-to-date for in-progress cumulative goals (as of ${asOf}), or the goal line for other measures`
+      : ` &middot; The &#9474; tick marks the goal line`;
+    document.getElementById('footNote').innerHTML=`Showing ${year} performance vs ${cmp} &middot; Data source: <b>GlobalMeasures</b> SharePoint List (${DB.records.length} records) &middot; Colors &amp; type per PVREA Brand Standards Guide${tickNote}`;
+  }
+  function renderSummary(counts,year){
+    const total=counts.met+counts.track+counts.jeopardy+counts.off+counts.nodata;
+    const withData=total-counts.nodata;
+    const cfg=[
+      {n:counts.met,l:'Goals Met',c:'#008457',s:withData?Math.round(counts.met/withData*100)+'% of measured':''},
+      {n:counts.track,l:'Tracking to Meet',c:'#00A8CD',s:'within reach'},
+      {n:counts.jeopardy,l:'In Jeopardy',c:'#F8991D',s:'need attention'},
+      {n:counts.off,l:'Missed / Off Track',c:'#D73647',s:'below target'},
+      {n:counts.nodata,l:'Planned / No Data',c:'#808285',s:'future years'}
+    ];
+    document.getElementById('summary').innerHTML=cfg.map(x=>
+      `<div class="scard" style="border-top-color:${x.c}">
+        <div class="num" style="color:${x.c}">${x.n}</div>
+        <div class="lbl">${x.l}</div><div class="sub">${x.s}</div></div>`).join('');
+  }
+  return {initControls,render,reload,currentYear,compareYear,
+    activeSections:()=>DB.sectionOrder.filter(s=>activePillars.has(s)),
+    statusFilter:()=>document.getElementById('statusSel').value};
+})();
+
+/* ============ REPORTS (print windows) ============ */
+const Report=(function(){
+  const CSS=`<style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&family=Roboto+Slab:wght@400;700&display=swap');
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Roboto',Arial,sans-serif;color:#22252a;padding:0;font-size:12px}
+    .sheet{max-width:8.5in;margin:0 auto;padding:.5in}
+    .rhead{position:relative;background:#005A9C;color:#fff;padding:22px 26px;overflow:hidden;border-radius:6px;margin-bottom:20px}
+    .rhead .ang{position:absolute;top:0;right:0;height:100%;width:40%;background:linear-gradient(115deg,transparent 40%,#00A8CD 40%,#00A8CD 60%,#7DB045 60%);clip-path:polygon(30% 0,100% 0,100% 100%,0 100%);opacity:.85}
+    .rhead h1{font-family:'Roboto Slab';font-size:22px;position:relative;z-index:2}
+    .rhead p{position:relative;z-index:2;opacity:.9;margin-top:4px;font-size:12px}
+    .logo{display:inline-block;background:#fff;color:#005A9C;font-family:'Roboto Slab';font-weight:700;padding:5px 9px;border-radius:5px;border:2px solid #D73647;margin-bottom:10px;position:relative;z-index:2}
+    h2.sec{font-family:'Roboto Slab';font-size:15px;margin:20px 0 8px;padding-bottom:5px;border-bottom:2px solid #005A9C}
+    table{width:100%;border-collapse:collapse;margin-bottom:14px}
+    th{background:#005A9C;color:#fff;text-align:left;padding:7px 9px;font-size:11px}
+    td{padding:6px 9px;border-bottom:1px solid #e4e6e9;font-size:11.5px}
+    tr:nth-child(even) td{background:#f6f8fa}
+    .badge{display:inline-block;padding:2px 8px;border-radius:10px;color:#fff;font-size:10px;font-weight:700}
+    .pill-strip{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:middle}
+    .kpis{display:flex;gap:12px;margin:16px 0}
+    .kpi{flex:1;border:1px solid #e4e6e9;border-top:4px solid;border-radius:8px;padding:12px}
+    .kpi .n{font-family:'Roboto Slab';font-size:28px;font-weight:700}
+    .kpi .l{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#808285;font-weight:700}
+    .foot{margin-top:24px;padding-top:10px;border-top:1px solid #e4e6e9;color:#9a9da1;font-size:10px;text-align:center}
+    .narr{background:#f6f8fa;border-left:4px solid #00A8CD;padding:12px 14px;border-radius:0 6px 6px 0;margin:12px 0;font-size:12px;line-height:1.5}
+    .fbar{background:#eef2f5;border:1px solid #dfe4e8;border-radius:6px;padding:9px 12px;margin-bottom:16px;font-size:11px;color:#555}
+    .fbar b{color:#22252a;text-transform:uppercase;letter-spacing:.4px;font-size:10px}
+    .fbar .ftag{display:inline-block;background:#fff;border:1px solid #d4dae0;border-radius:12px;padding:2px 9px;margin:2px 4px 2px 0;font-weight:600;color:#005A9C}
+    th.hl,td.hl{background:#fff3d6 !important;box-shadow:inset 0 0 0 1px #F8991D}
+    th.hl{background:#0a4f88 !important}
+    th.hlc,td.hlc{background:#e6f4fa !important}
+    th.hlc{background:#0a4f88 !important}
+    .none{color:#9a9da1;font-style:italic;margin:8px 0 16px}
+    @media print{.noprint{display:none}body{padding:0}.sheet{padding:.4in}}
+    .pbtn{position:fixed;top:12px;right:12px;background:#D73647;color:#fff;border:none;padding:10px 18px;border-radius:6px;font-weight:700;cursor:pointer;font-family:Roboto}
+  </style>`;
+  function buildDoc(title,inner){
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title>${CSS}</head>
+      <body><div class="sheet">${inner}<div class="foot">Poudre Valley REA &middot; Generated ${new Date().toLocaleDateString()} &middot; Source: GlobalMeasures SharePoint List &middot; Confidential</div></div></body></html>`;
+  }
+  function open(title,inner){
+    const html=buildDoc(title,inner);
+    const oldFrame=document.getElementById('reportPrintFrame');
+    if(oldFrame) oldFrame.remove();
+
+    // Load only the selected report in an invisible iframe, then open the
+    // browser's print dialog immediately. No new tab or second print button.
+    const frame=document.createElement('iframe');
+    frame.id='reportPrintFrame';
+    frame.title=title;
+    frame.style.position='fixed';
+    frame.style.right='0';
+    frame.style.bottom='0';
+    frame.style.width='1px';
+    frame.style.height='1px';
+    frame.style.border='0';
+    frame.style.opacity='0';
+    frame.style.pointerEvents='none';
+    document.body.appendChild(frame);
+
+    frame.onload=()=>{
+      try{
+        const printWindow=frame.contentWindow;
+        printWindow.focus();
+        setTimeout(()=>printWindow.print(),150);
+      }catch(e){
+        console.error('Unable to open the report print dialog.',e);
+        showOverlay(title,html);
+      }
+    };
+    frame.srcdoc=html;
+  }
+  function showOverlay(title,html){
+    const prev=document.getElementById('reportOverlay');
+    if(prev) prev.remove();
+    const ov=document.createElement('div');
+    ov.id='reportOverlay';
+    ov.innerHTML=`
+      <div class="ro-toolbar">
+        <button class="ro-print" title="Print or save as PDF">&#128424; Print / Save PDF</button>
+        <button class="ro-open" title="Open in a new browser tab">&#8599; Open in new tab</button>
+        <button class="ro-close" title="Close">&times; Close</button>
+      </div>
+      <iframe class="ro-frame" title="${title}"></iframe>`;
+    document.body.appendChild(ov);
+    const frame=ov.querySelector('.ro-frame');
+    // Write the report into the iframe via srcdoc (works in sandboxed previews).
+    frame.srcdoc=html;
+    // Print just the report iframe.
+    ov.querySelector('.ro-print').onclick=()=>{
+      try{ frame.contentWindow.focus(); frame.contentWindow.print(); }
+      catch(e){ window.print(); }
+    };
+    // Offer a real new tab via a Blob URL (works where pop-ups are allowed).
+    ov.querySelector('.ro-open').onclick=()=>{
+      try{
+        const blob=new Blob([html],{type:'text/html'});
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');
+        a.href=url; a.target='_blank'; a.rel='noopener';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),60000);
+      }catch(e){ alert('Your browser blocked opening a new tab. Use Print / Save PDF instead.'); }
+    };
+    const close=()=>ov.remove();
+    ov.querySelector('.ro-close').onclick=close;
+    ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
+    document.addEventListener('keydown',function esc(e){ if(e.key==='Escape'){ close(); document.removeEventListener('keydown',esc); } });
+  }
+  function header(sub){
+    return `<div class="rhead"><div class="ang"></div><span class="logo">PVREA</span>
+      <h1>${sub.title}</h1><p>${sub.sub}</p></div>`;
+  }
+  /* ----- selection helpers (read live from the web page) ----- */
+  function sections(){ return App.activeSections(); }              // respects pillar chips
+  function stFilter(){ return App.statusFilter(); }                // respects status dropdown
+  function applyStatus(rows){ const f=stFilter(); return f?rows.filter(x=>x.ev.status.key===f):rows; }
+  function filterBanner(y){
+    const cmp=App.compareYear(), stf=stFilter(), secs=sections();
+    const pillLbl = secs.length===DB.sectionOrder.length ? 'All pillars' : (secs.length?secs.join(', '):'None selected');
+    const stLbl = stf ? Engine.STATUS[stf].label : 'All statuses';
+    return `<div class="fbar"><b>Report reflects your dashboard selections</b>
+      <span class="ftag">Year: ${y}</span>
+      <span class="ftag">Compare: ${cmp}</span>
+      <span class="ftag">Status: ${stLbl}</span>
+      <span class="ftag">Pillars: ${pillLbl}</span></div>`;
+  }
+  function gather(year){
+    const rows=[];
+    sections().forEach(sec=>measuresIn(sec).forEach(m=>{
+      const r=recFor(m,year); if(!r)return; rows.push({sec,m,r,ev:Engine.evaluate(r)});
+    }));
+    return rows;
+  }
+  function badge(ev){return `<span class="badge" style="background:${ev.status.hex}">${ev.status.label}</span>`;}
+  function trendCell(m,year,cmp){
+    const cr=recFor(m,cmp), r=recFor(m,year);
+    if(!cr||cr.actual==null||!r||r.actual==null) return '<td style="color:#c3c5c8">&mdash;</td>';
+    const pa=Engine.parseNum(r.actual), pb=Engine.parseNum(cr.actual);
+    if(!pa||!pb||pa.value==null||pb.value==null) return `<td>${cr.actual}</td>`;
+    const diff=pa.value-pb.value;
+    const arrow=diff>0?'&#9650;':diff<0?'&#9660;':'&#9644;';
+    return `<td>${arrow} ${cr.actual}</td>`;
+  }
+  function rowsTable(list,showSec=true,year=null,cmp=null){
+    const showCmp = cmp!=null && year!=null;
+    let h=`<table><tr>${showSec?'<th>Pillar</th>':''}<th>Measure</th><th>Current</th><th>Goal</th>${showCmp?`<th>vs ${cmp}</th>`:''}<th>Status</th></tr>`;
+    list.forEach(x=>{h+=`<tr>${showSec?`<td><span class="pill-strip" style="background:${x.r.color}"></span>${x.sec}</td>`:''}<td>${x.m}</td><td>${x.r.actual??'&mdash;'}</td><td>${x.r.goal??'&mdash;'}</td>${showCmp?trendCell(x.m,year,cmp):''}<td>${badge(x.ev)}</td></tr>`;});
+    return h+'</table>';
+  }
+  function counts(rows){const c={met:0,track:0,jeopardy:0,off:0,nodata:0};rows.forEach(x=>c[x.ev.status.key]++);return c;}
+
+  function executive(){
+    const y=App.currentYear(), cmp=App.compareYear(), stf=stFilter();
+    const rows=gather(y), c=counts(rows), wd=rows.length-c.nodata;
+    const shown=applyStatus(rows);
+    const secs=sections();
+    const scope = secs.length===DB.sectionOrder.length ? 'all five pillars' : `${secs.length} selected pillar${secs.length===1?'':'s'}`;
+    const groups=[['met','Goals Met','#008457'],['track','Tracking to Meet','#00A8CD'],['jeopardy','In Jeopardy','#F8991D'],['off','Missed / Off Track','#D73647'],['nodata','Planned / No Data','#808285']];
+    let body=header({title:`Executive Performance Report &mdash; ${y}`,sub:`Strategic scorecard summary across ${scope} &middot; compared to ${cmp}`});
+    body+=filterBanner(y);
+    body+=`<div class="kpis">
+      <div class="kpi" style="border-top-color:#008457"><div class="n" style="color:#008457">${c.met}</div><div class="l">Goals Met</div></div>
+      <div class="kpi" style="border-top-color:#00A8CD"><div class="n" style="color:#00A8CD">${c.track}</div><div class="l">Tracking</div></div>
+      <div class="kpi" style="border-top-color:#F8991D"><div class="n" style="color:#F8991D">${c.jeopardy}</div><div class="l">In Jeopardy</div></div>
+      <div class="kpi" style="border-top-color:#D73647"><div class="n" style="color:#D73647">${c.off}</div><div class="l">Off Track</div></div></div>`;
+    const rate=wd?Math.round(c.met/wd*100):0;
+    body+=`<div class="narr"><b>Executive summary:</b> Of ${wd} actively measured goals in ${y} across ${scope}, <b>${c.met} (${rate}%)</b> have been met and <b>${c.track}</b> are tracking to meet target. <b>${c.jeopardy+c.off}</b> require leadership attention${c.off?`, including ${c.off} currently off track`:''}. ${c.nodata} measures are planned for future years.${stf?` This report is filtered to show only <b>${Engine.STATUS[stf].label}</b> measures.`:''}</div>`;
+    const list = stf ? groups.filter(g=>g[0]===stf) : groups;
+    let any=false;
+    list.forEach(([k,lbl,col])=>{const g=shown.filter(x=>x.ev.status.key===k);if(!g.length)return;any=true;body+=`<h2 class="sec" style="border-color:${col}">${lbl} (${g.length})</h2>${rowsTable(g,true,y,cmp)}`;});
+    if(!any) body+=`<div class="none">No measures match the current selections.</div>`;
+    open('Executive Report',body);
+  }
+  function onepage(){
+    const y=App.currentYear(), cmp=App.compareYear(), stf=stFilter();
+    const c=counts(gather(y));
+    let body=header({title:`One-Page Scorecard &mdash; ${y}`,sub:`At-a-glance strategic performance &middot; compared to ${cmp}`});
+    body+=filterBanner(y);
+    body+=`<div class="kpis">
+      <div class="kpi" style="border-top-color:#008457"><div class="n" style="color:#008457">${c.met}</div><div class="l">Met</div></div>
+      <div class="kpi" style="border-top-color:#00A8CD"><div class="n" style="color:#00A8CD">${c.track}</div><div class="l">Tracking</div></div>
+      <div class="kpi" style="border-top-color:#F8991D"><div class="n" style="color:#F8991D">${c.jeopardy}</div><div class="l">Jeopardy</div></div>
+      <div class="kpi" style="border-top-color:#D73647"><div class="n" style="color:#D73647">${c.off}</div><div class="l">Off Track</div></div>
+      <div class="kpi" style="border-top-color:#808285"><div class="n" style="color:#808285">${c.nodata}</div><div class="l">Planned</div></div></div>`;
+    let any=false;
+    sections().forEach(sec=>{
+      let list=measuresIn(sec).map(m=>({sec,m,r:recFor(m,y)})).filter(x=>x.r).map(x=>({...x,ev:Engine.evaluate(x.r)}));
+      list=applyStatus(list);
+      if(!list.length) return;
+      any=true;
+      body+=`<h2 class="sec" style="border-color:${DB.pillarColors[sec]}">${sec}</h2>${rowsTable(list,false,y,cmp)}`;
+    });
+    if(!any) body+=`<div class="none">No measures match the current selections.</div>`;
+    open('One-Page Report',body);
+  }
+  function concerns(){
+    const y=App.currentYear(), cmp=App.compareYear();
+    const rows=gather(y).filter(x=>x.ev.status.key==='jeopardy'||x.ev.status.key==='off');
+    const secs=sections();
+    const scope = secs.length===DB.sectionOrder.length ? 'all pillars' : secs.join(', ');
+    let body=header({title:`Areas of Concern &mdash; ${y}`,sub:`Measures in jeopardy or off track requiring action &middot; ${scope}`});
+    body+=filterBanner(y);
+    if(!rows.length){body+=`<div class="narr">&#127881; No measures are in jeopardy or off track for ${y} within the current selection. All measured goals are met or tracking to meet.</div>`;}
+    else{
+      body+=`<div class="narr"><b>${rows.length}</b> measure(s) need attention. Prioritize the off-track items (red) for immediate corrective planning.</div>`;
+      const off=rows.filter(x=>x.ev.status.key==='off'), jeo=rows.filter(x=>x.ev.status.key==='jeopardy');
+      if(off.length){body+=`<h2 class="sec" style="border-color:#D73647">Off Track &mdash; Immediate Action (${off.length})</h2>${rowsTable(off,true,y,cmp)}`;}
+      if(jeo.length){body+=`<h2 class="sec" style="border-color:#F8991D">In Jeopardy &mdash; Monitor Closely (${jeo.length})</h2>${rowsTable(jeo,true,y,cmp)}`;}
+    }
+    open('Concerns Report',body);
+  }
+  function pillar(){
+    const y=App.currentYear(), cmp=App.compareYear(), stf=stFilter();
+    let body=header({title:`Pillar Scorecard &mdash; ${y}`,sub:`Detailed performance by strategic pillar &middot; compared to ${cmp}`});
+    body+=filterBanner(y);
+    let any=false;
+    sections().forEach(sec=>{
+      const full=measuresIn(sec).map(m=>({sec,m,r:recFor(m,y)})).filter(x=>x.r).map(x=>({...x,ev:Engine.evaluate(x.r)}));
+      const list=applyStatus(full);
+      if(!list.length) return;
+      any=true;
+      const c=counts(full);
+      body+=`<h2 class="sec" style="border-color:${DB.pillarColors[sec]}">${sec}</h2>
+        <p style="font-size:11px;color:#808285;margin-bottom:8px">${c.met} met &middot; ${c.track} tracking &middot; ${c.jeopardy} in jeopardy &middot; ${c.off} off track</p>
+        ${rowsTable(list,false,y,cmp)}`;
+    });
+    if(!any) body+=`<div class="none">No measures match the current selections.</div>`;
+    open('Pillar Scorecard',body);
+  }
+  function trend(){
+    const y=App.currentYear(), cmp=App.compareYear(), stf=stFilter();
+    const yrs=DB.years;
+    let body=header({title:'Year-over-Year Trend Report',sub:`Actual performance across all tracked years (${yrs[0]}&ndash;${yrs[yrs.length-1]}) &middot; ${y} &amp; ${cmp} highlighted`});
+    body+=filterBanner(y);
+    let any=false;
+    sections().forEach(sec=>{
+      const ms=measuresIn(sec).filter(m=>{
+        if(!stf) return true;
+        const r=recFor(m,y); if(!r) return false;
+        return Engine.evaluate(r).status.key===stf;
+      });
+      if(!ms.length) return;
+      any=true;
+      body+=`<h2 class="sec" style="border-color:${DB.pillarColors[sec]}">${sec}</h2>`;
+      let h=`<table><tr><th>Measure</th>${yrs.map(yy=>`<th class="${yy===y?'hl':yy===cmp?'hlc':''}">${yy}${yy===y?' &#9733;':yy===cmp?' &#9671;':''}</th>`).join('')}</tr>`;
+      ms.forEach(m=>{
+        h+=`<tr><td>${m}</td>`+yrs.map(yy=>{const cls=yy===y?'hl':yy===cmp?'hlc':'';const r=recFor(m,yy);if(!r||r.actual==null)return `<td class="${cls}" style="color:#c3c5c8">&mdash;</td>`;const ev=Engine.evaluate(r);return `<td class="${cls}"><span class="pill-strip" style="background:${ev.status.hex}"></span>${r.actual}</td>`;}).join('')+'</tr>';
+      });
+      body+=h+'</table>';
+    });
+    if(!any) body+=`<div class="none">No measures match the current selections.</div>`;
+    body+=`<p style="font-size:10px;color:#9a9da1;margin-top:6px">&#9733; Selected year (${y}) &middot; &#9671; Comparison year (${cmp})</p>`;
+    open('Year-over-Year Report',body);
+  }
+  return {executive,onepage,concerns,pillar,trend};
+})();
+
+/* ============ CHATBOT (offline, rule-based over the data) ============ */
+const Chat=(function(){
+  const suggestions=['What is in jeopardy in 2026?','Show me safety measures','Which goals did we meet?','How is SAIDI trending?','Summarize Affordable Service'];
+  function toggle(){document.getElementById('chatPanel').classList.toggle('hidden');}
+  function add(html,who){const b=document.getElementById('chatBody');const d=document.createElement('div');d.className='msg '+who;d.innerHTML=html;b.appendChild(d);b.scrollTop=b.scrollHeight;}
+  function yearFromText(t){const m=t.match(/20(2[4-9]|30)/);return m?parseInt(m[0]):App.currentYear();}
+  function tbl(list,year){
+    if(!list.length) return '<i>No matching measures.</i>';
+    let h=`<table><tr><th>Measure</th><th>${year}</th><th>Goal</th><th>Status</th></tr>`;
+    list.slice(0,12).forEach(x=>{h+=`<tr><td>${x.m}</td><td>${x.r.actual??'—'}</td><td>${x.r.goal??'—'}</td><td style="color:${x.ev.status.hex};font-weight:700">${x.ev.status.label}</td></tr>`;});
+    h+='</table>';
+    if(list.length>12) h+=`<div style="font-size:11px;margin-top:4px">…and ${list.length-12} more</div>`;
+    return h;
+  }
+  function allRows(year){const rows=[];DB.sectionOrder.forEach(sec=>measuresIn(sec).forEach(m=>{const r=recFor(m,year);if(r)rows.push({sec,m,r,ev:Engine.evaluate(r)});}));return rows;}
+  function pillarMatch(t){
+    t=t.toLowerCase();
+    const map={'safety':'Top Safety Performance','member':'Exceptional Member Experience','experience':'Exceptional Member Experience','afford':'Affordable Service','cost':'Affordable Service','rate':'Affordable Service','utility':'Utility of the Future','future':'Utility of the Future','reliab':'Utility of the Future','culture':'High Performance Culture','workforce':'High Performance Culture','wellness':'High Performance Culture'};
+    for(const k in map){if(t.includes(k))return map[k];}
+    return null;
+  }
+  function answer(q){
+    const t=q.toLowerCase(), year=yearFromText(t);
+    // specific measure lookup
+    const measure=DB.records.find(r=>{const mm=r.measure.toLowerCase();return mm.includes(t.replace(/[^a-z ]/g,'').trim())&&t.length>4;});
+    // trend for a keyword (e.g. SAIDI)
+    const kw=['saidi','dart','resap','acsi','carbon','wellness','loyalty','cemi','vpp','virtual power','security','workforce','career','advocates','survey','presentations','inspections'];
+    const hitKw=kw.find(k=>t.includes(k));
+    if((t.includes('trend')||t.includes('trending')||t.includes('over time'))&&hitKw){
+      const rec=DB.records.find(r=>r.measure.toLowerCase().includes(hitKw)||r.measure.toLowerCase().replace(/[^a-z]/g,'').includes(hitKw.replace(/[^a-z]/g,'')));
+      if(rec){const m=rec.measure;let h=`<b>${m}</b> over time:<table><tr><th>Year</th><th>Actual</th><th>Goal</th></tr>`;DB.years.forEach(y=>{const r=recFor(m,y);h+=`<tr><td>${y}</td><td>${r&&r.actual!=null?r.actual:'—'}</td><td>${r?r.goal:'—'}</td></tr>`;});return h+'</table>';}
+    }
+    // status queries
+    const statusMap=[['jeopard','jeopardy'],['at risk','jeopardy'],['off track','off'],['miss','off'],['met','met'],['achiev','met'],['track','track'],['on track','track']];
+    let stKey=null; for(const[a,b]of statusMap){if(t.includes(a)){stKey=b;break;}}
+    let rows=allRows(year);
+    const pil=pillarMatch(t);
+    if(pil) rows=rows.filter(x=>x.sec===pil);
+    if(stKey){
+      let filtered=rows.filter(x=>x.ev.status.key===stKey);
+      if(stKey==='off') filtered=rows.filter(x=>x.ev.status.key==='off'||x.ev.status.key==='jeopardy');
+      const lbl={jeopardy:'in jeopardy',off:'off track / at risk',met:'met',track:'tracking to meet'}[stKey];
+      return `Here are the measures <b>${lbl}</b> in <b>${year}</b>${pil?` for <b>${pil}</b>`:''} (${filtered.length}):${tbl(filtered,year)}`;
+    }
+    // pillar summary
+    if(pil){
+      const c={met:0,track:0,jeopardy:0,off:0,nodata:0};rows.forEach(x=>c[x.ev.status.key]++);
+      return `<b>${pil}</b> in ${year}: ${c.met} met, ${c.track} tracking, ${c.jeopardy} in jeopardy, ${c.off} off track.${tbl(rows,year)}`;
+    }
+    // single measure detail
+    if(measure){const m=measure.measure;const r=recFor(m,year);const ev=Engine.evaluate(r);return `<b>${m}</b> (${year}): actual <b>${r.actual??'—'}</b> vs goal <b>${r.goal??'—'}</b> — <span style="color:${ev.status.hex};font-weight:700">${ev.status.label}</span>.`;}
+    // overall summary
+    if(t.includes('summar')||t.includes('overview')||t.includes('how are we')||t.includes('overall')){
+      const c={met:0,track:0,jeopardy:0,off:0,nodata:0};rows.forEach(x=>c[x.ev.status.key]++);const wd=rows.length-c.nodata;
+      return `<b>${year} overall:</b> ${c.met}/${wd} goals met (${wd?Math.round(c.met/wd*100):0}%), ${c.track} tracking, ${c.jeopardy} in jeopardy, ${c.off} off track. Ask me about any pillar or measure for detail.`;
+    }
+    if(t.includes('help')||t.includes('what can you')){
+      return `I can answer questions about the GlobalMeasures data. Try:<br>• "What's in jeopardy in 2026?"<br>• "Show me safety measures"<br>• "How is SAIDI trending?"<br>• "Summarize Affordable Service"<br>• "Which goals did we meet in 2025?"`;
+    }
+    // fallback
+    const c={met:0,track:0,jeopardy:0,off:0,nodata:0};rows.forEach(x=>c[x.ev.status.key]++);
+    return `I looked at <b>${year}</b> across all pillars: ${c.met} met, ${c.track} tracking, ${c.jeopardy} in jeopardy, ${c.off} off track. Try naming a pillar (safety, member, affordable, utility, culture), a status ("in jeopardy"), or a measure ("SAIDI").`;
+  }
+  function send(){const i=document.getElementById('chatInput');const q=i.value.trim();if(!q)return;add(q,'user');i.value='';setTimeout(()=>add(answer(q),'bot'),200);}
+  function init(){
+    add(`Hi Scott 👋 I'm your Measures Assistant. I can interrogate the raw GlobalMeasures data — filter by pillar, status, year, or ask about a specific measure. What would you like to know?`,'bot');
+    const s=document.getElementById('chatSuggest');
+    suggestions.forEach(q=>{const b=document.createElement('button');b.textContent=q;b.onclick=()=>{document.getElementById('chatInput').value=q;send();};s.appendChild(b);});
+  }
+  return {toggle,send,init};
+})();
+
+/* ============ LIVE SHAREPOINT DATA SOURCE ============ */
+const SP=(function(){
+  const CONFIG={
+    // Edit here if the site path or list name ever changes:
+    siteUrl:'https://poudrevalleyrea.sharepoint.com/sites/BusinessProcess-',
+    listName:'GlobalMeasures',
+    autoRefreshMinutes:0   // set to e.g. 10 for auto-refresh while the page is open
+  };
+  const SECTION_COLORS={"Top Safety Performance":"#00A8CD","Exceptional Member Experience":"#005A9C","Affordable Service":"#7DB045","Utility of the Future":"#D73647","High Performance Culture":"#F8991D"};
+  let timer=null;
+  function setStatus(state,msg){
+    const el=document.getElementById('dsStatus'); if(!el)return;
+    const c={live:'#2ecc71',cached:'#F8991D',loading:'#00A8CD',error:'#D73647'}[state]||'#808285';
+    el.querySelector('.ds-dot').style.background=c;
+    el.querySelector('.ds-text').innerHTML=msg;
+  }
+  function serverRelative(){
+    // Prefer the current site if the page is hosted inside SharePoint, else use CONFIG.
+    try{
+      if(location.hostname.endsWith('sharepoint.com')){
+        const parts=location.pathname.split('/'); const i=parts.indexOf('sites');
+        if(i>=0&&parts[i+1]) return '/'+parts[i]+'/'+parts[i+1];
+      }
+    }catch(e){}
+    try{ return new URL(CONFIG.siteUrl).pathname.replace(/\/$/,''); }catch(e){ return ''; }
+  }
+  function pick(item,names){
+    const keys=Object.keys(item);
+    for(const n of names){
+      const k=keys.find(k=>k.toLowerCase()===n.toLowerCase());
+      if(k!==undefined&&item[k]!==null&&item[k]!=='') return item[k];
+    }
+    return null;
+  }
+  function mapItems(items){
+    const recs=[];
+    items.forEach(it=>{
+      const f = it.fields ? it.fields : it;   // Graph vs REST shape
+      const section=pick(f,['Section','field_1']);
+      const measure=pick(f,['Measure','field_2']);
+      const yearRaw=pick(f,['Year','field_3']);
+      if(!section||!measure||yearRaw==null) return;
+      const year=parseInt(String(yearRaw).replace(/[^0-9]/g,''));
+      if(isNaN(year)) return;
+      const actual=pick(f,['Actual','field_4']);
+      const goal=pick(f,['Goal','field_5']);
+      const sec=String(section).trim();
+      recs.push({section:sec,measure:String(measure).trim(),year,
+        actual:actual==null?null:String(actual).trim(),
+        goal:goal==null?null:String(goal).trim(),
+        color:SECTION_COLORS[sec]||'#808285'});
+    });
+    return recs;
+  }
+  async function fetchAll(){
+    const base=serverRelative()+"/_api/web/lists/getbytitle('"+CONFIG.listName+"')/items";
+    const url=base+"?$top=2000&$select=*";
+    const res=await fetch(url,{headers:{'Accept':'application/json;odata=nometadata'},credentials:'same-origin'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const json=await res.json();
+    const items=json.value||(json.d&&json.d.results)||[];
+    if(!items.length) throw new Error('list returned no items');
+    return items;
+  }
+  async function load(manual){
+    setStatus('loading','Connecting to SharePoint&hellip;');
+    try{
+      const items=await fetchAll();
+      const recs=mapItems(items);
+      if(!recs.length) throw new Error('no rows mapped (check column names)');
+      const years=[...new Set(recs.map(r=>r.year))].sort((a,b)=>a-b);
+      DB={sectionOrder:DB_SNAPSHOT.sectionOrder,pillarColors:DB_SNAPSHOT.pillarColors,records:recs,years};
+      App.reload();
+      setStatus('live','<b>Live</b> &middot; '+recs.length+' records &middot; '+new Date().toLocaleTimeString());
+    }catch(e){
+      DB=DB_SNAPSHOT; App.reload();
+      const why = (location.protocol==='file:') ? 'opened as a local file' :
+                  (!location.hostname.endsWith('sharepoint.com')) ? 'not hosted in SharePoint' : e.message;
+      setStatus('cached','Last updated: <strong data-lexical-text="true">Aug 20, 2026, 2:47 PM </strong><em class="___11wyd0v f1j4dglz" data-lexical-text="true">Azure REST API Integration coming soon\' </em>');
+      if(manual) console.warn('[SP live load failed]',e);
+    }
+  }
+  function startAuto(){ if(CONFIG.autoRefreshMinutes>0){ clearInterval(timer); timer=setInterval(()=>load(false),CONFIG.autoRefreshMinutes*60000); } }
+  return {load,startAuto,setStatus,CONFIG};
+})();
+
+/* ============ BOOT ============ */
+App.initControls();
+App.render();
+Chat.init();
+SP.load(false);      // attempt live SharePoint data; falls back to snapshot automatically
+SP.startAuto();
+</script>
+</body>
 </html>
