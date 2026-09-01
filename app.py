@@ -1,6 +1,7 @@
 import os
 import mssql_python
 from dotenv import load_dotenv
+from azure.appconfiguration.provider import load
 
 from flask import (Flask, redirect, render_template, request,
                    send_from_directory, url_for)
