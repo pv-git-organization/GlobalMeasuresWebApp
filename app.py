@@ -1,15 +1,50 @@
 import os
+import mssql_python
+from dotenv import load_dotenv
 
 from flask import (Flask, redirect, render_template, request,
                    send_from_directory, url_for)
 
 app = Flask(__name__)
 
+load_dotenv()
+
+CONNECTION_STRING = os.getenv("CONNECTION_STRING")
+
+def execute_query(query=None):
+    query = """
+        SELECT *
+        FROM [dbo].[GlobalMeasures]
+        Where MeasureYear = '2026'
+        AND Pillar = 'Top Safety Performance'
+        AND Measure = 'Days Away Restricted Transferred (DART)'
+    """
+
+    rows = []
+
+    with mssql_python.connect(CONNECTION_STRING) as conn:
+        cursor = conn.cursor()
+        # Replace with your real query. Use parameters (cursor.execute(sql, params))
+        # for anything derived from the request instead of string-formatting it in.
+        cursor.execute(query)
+
+        columns = [col[0] for col in cursor.description]
+        rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        print(rows)
+
+    return rows
+ 
+
+ 
 
 @app.route('/')
 def index():
-   print('Request for index page received')
-   return render_template('index.html')
+
+    rows = execute_query()
+    actual_value = rows[0].get("ActualValue")
+   
+    print('Request for index page received')
+    return render_template('index.html', actual_value=actual_value)
 
 @app.route('/favicon.ico')
 def favicon():
