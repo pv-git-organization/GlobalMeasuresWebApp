@@ -2,6 +2,7 @@ import os
 import mssql_python
 from dotenv import load_dotenv
 from azure.appconfiguration.provider import load
+from azure.identity import ManagedIdentityCredential
 
 from flask import (Flask, redirect, render_template, request,
                    send_from_directory, url_for)
@@ -51,6 +52,19 @@ def index():
 def test():
 
     return render_template('test.html')
+
+@app.route('/test2')
+def test():
+    print("IDENTITY_ENDPOINT:", os.environ.get("IDENTITY_ENDPOINT"))
+    print("IDENTITY_HEADER present:", "IDENTITY_HEADER" in os.environ)
+ 
+    try:
+        token = ManagedIdentityCredential().get_token("https://database.windows.net/.default")
+        print("SUCCESS:", token.token[:30])
+    except Exception as e:
+        print("FAILED:", e)
+    return render_template('test2.html')
+
 
 @app.route('/favicon.ico')
 def favicon():
