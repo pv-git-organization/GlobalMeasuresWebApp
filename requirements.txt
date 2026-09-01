@@ -2,4 +2,4 @@ Flask==3.1.0
 gunicorn
 mssql-python
 azure-appconfiguration-provider
-dotenv
+python-dotenv
