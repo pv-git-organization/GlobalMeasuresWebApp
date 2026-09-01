@@ -54,7 +54,7 @@ def test():
     return render_template('test.html')
 
 @app.route('/test2')
-def test():
+def test2():
     print("IDENTITY_ENDPOINT:", os.environ.get("IDENTITY_ENDPOINT"))
     print("IDENTITY_HEADER present:", "IDENTITY_HEADER" in os.environ)
  
