@@ -63,4 +63,4 @@ jobs:
         with:
           app-name: 'GlobalMeasures2'
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_EED62C2C667B4125B253E9883A16CEFD }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_98FCE41BA0674B95BEFBFB837B605C6C }}
