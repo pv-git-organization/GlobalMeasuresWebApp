@@ -130,7 +130,7 @@ main{max-width:1400px;margin:0 auto;padding:22px 26px 60px}
   <div class="angular"></div>
   <div class="hd-inner">
     <div class="brand-mark">
-      <div class="pv-logo"><img src="/static/logo.jpg" alt="Poudre Valley REA"></div>
+      <div class="pv-logo"><img src="logo.jpg" alt="Poudre Valley REA"></div>
       <div class="hd-title">
         <h1>Global Measures Scorecard</h1>
         <p>Strategic performance tracking &middot; 2024&ndash;2030</p>
@@ -146,7 +146,7 @@ main{max-width:1400px;margin:0 auto;padding:22px 26px 60px}
   </div>
   <div class="ds-bar">
     <div id="dsStatus" class="ds-status"><span class="ds-dot"></span><span class="ds-text">Initializing&hellip;</span></div>
-    <button class="ds-refresh" onclick="Data.refresh()" title="Re-query dbo.GlobalMeasures through the Flask API">&#8635; Refresh live data</button>
+    <button class="ds-refresh" onclick="SP.load(true)" title="Reload from SharePoint">&#8635; Refresh live data</button>
   </div>
 </header>
 
@@ -154,7 +154,8 @@ main{max-width:1400px;margin:0 auto;padding:22px 26px 60px}
   <div class="controls-inner">
     <div class="ctl-group">
       <label>Year</label>
-      <select id="yearSel" onchange="App.render()"></select>
+      <!--<select id="yearSel" onchange="App.render()"></select>-->
+      {{ actual_value }}
     </div>
     <div class="ctl-group">
       <label>Compare</label>
@@ -187,7 +188,7 @@ main{max-width:1400px;margin:0 auto;padding:22px 26px 60px}
   <div class="footer-note" id="footNote"></div>
 </main>
 
-<button id="chatFab" onclick="Chat.toggle()" title="Ask the data"><img src="/static/wattsworth.png" alt="Wattsworth AI Assistant"></button>
+<button id="chatFab" onclick="Chat.toggle()" title="Ask the data"><img src="wattsworth.png" alt="Wattsworth AI Assistant"></button>
 <div id="chatPanel" class="hidden">
   <div class="chat-head">
     <div><b>Measures Assistant</b><br><small>Ask me anything about the data</small></div>
@@ -201,24 +202,10 @@ main{max-width:1400px;margin:0 auto;padding:22px 26px 60px}
   </div>
 </div>
 
-<!-- ============================================================
-     SERVER-INJECTED DATA (Flask / Azure SQL)
-     app.py:
-        rows = execute_query(SQL)                 # SELECT ... FROM dbo.GlobalMeasures
-        return render_template('index.html', metrics_json=json.dumps(rows))
-
-     Expected columns (any casing):
-        Pillar, Measure, MeasureYear, ActualValue, TargetValue,
-        GlobalMeasureID, MeasureSort, YearSort
-
-     Load order: injected JSON  ->  /api/measures  ->  embedded snapshot
-     ============================================================ -->
-<script id="sqlData" type="application/json">{{ metrics_json|default('null', true)|safe }}</script>
-
 <script>
 /* ============ EMBEDDED DATA (fallback snapshot) ============ */
 const DB_SNAPSHOT = {"sectionOrder":["Top Safety Performance","Exceptional Member Experience","Affordable Service","Utility of the Future","High Performance Culture"],"pillarColors":{"Top Safety Performance":"#00A8CD","Exceptional Member Experience":"#005A9C","Affordable Service":"#7DB045","Utility of the Future":"#D73647","High Performance Culture":"#F8991D"},"years":[2024,2025,2026,2027,2028,2029,2030],"records":[{"section":"Top Safety Performance","measure":"Days Away Restricted Transferred (DART)","year":2024,"actual":"0","goal":"0","color":"#00A8CD","sort":1.0},{"section":"Top Safety Performance","measure":"Rural Electric Safety Achievement Program (RESAP)","year":2026,"actual":null,"goal":"> 3.0","color":"#00A8CD","sort":10.0},{"section":"Utility of the Future","measure":"Virtual Power Plant Total MW's Available","year":2027,"actual":null,"goal":"\u2265 10","color":"#D73647","sort":16.0},{"section":"Utility of the Future","measure":"System Average Interruption Duration Index (SAIDI)","year":2028,"actual":null,"goal":"\u2264 50","color":"#D73647","sort":17.0},{"section":"Utility of the Future","measure":"Consumers Experiencing Multiple Interruptions (% Below CEMI-3)","year":2028,"actual":null,"goal":"\u2265 96%","color":"#D73647","sort":18.0},{"section":"Utility of the Future","measure":"Carbon Free Generation","year":2028,"actual":null,"goal":"\u2265 60%","color":"#D73647","sort":19.0},{"section":"Utility of the Future","measure":"Virtual Power Plant Total MW's Available","year":2028,"actual":null,"goal":"\u2265 12","color":"#D73647","sort":20.0},{"section":"Utility of the Future","measure":"System Average Interruption Duration Index (SAIDI)","year":2029,"actual":null,"goal":"\u2264 50","color":"#D73647","sort":21.0},{"section":"Utility of the Future","measure":"Consumers Experiencing Multiple Interruptions (% Below CEMI-3)","year":2029,"actual":null,"goal":"\u2265 97%","color":"#D73647","sort":22.0},{"section":"Utility of the Future","measure":"Carbon Free Generation","year":2029,"actual":null,"goal":"\u2265 60%","color":"#D73647","sort":23.0},{"section":"Utility of the Future","measure":"Virtual Power Plant Total MW's Available","year":2029,"actual":null,"goal":"\u2265 16","color":"#D73647","sort":24.0},{"section":"Utility of the Future","measure":"System Average Interruption Duration Index (SAIDI)","year":2030,"actual":null,"goal":"\u2264 50","color":"#D73647","sort":25.0},{"section":"Top Safety Performance","measure":"Qualified Field Observer Inspections (Business, After Hours)","year":2026,"actual":"107, 22","goal":"\u2265 150 , \u226525","color":"#00A8CD","sort":11.0},{"section":"Utility of the Future","measure":"Consumers Experiencing Multiple Interruptions (% Below CEMI-3)","year":2030,"actual":null,"goal":"\u2265 98%","color":"#D73647","sort":26.0},{"section":"Utility of the Future","measure":"Carbon Free Generation","year":2030,"actual":null,"goal":"\u2265 80%","color":"#D73647","sort":27.0},{"section":"Utility of the Future","measure":"Virtual Power Plant Total MW's Available","year":2030,"actual":null,"goal":"\u2265 20","color":"#D73647","sort":28.0},{"section":"High Performance Culture","measure":"Active Career Development Plans","year":2024,"actual":"0.076","goal":"\u2265 5%","color":"#F8991D","sort":1.0},{"section":"High Performance Culture","measure":"Workforce Development","year":2024,"actual":"1","goal":"1","color":"#F8991D","sort":2.0},{"section":"High Performance Culture","measure":"Total Wellness Engagement (% Funded)","year":2024,"actual":"0.75","goal":"\u2265 75%","color":"#F8991D","sort":3.0},{"section":"High Performance Culture","measure":"Security Awareness Proficiency - out of 100","year":2024,"actual":"0.78","goal":"\u2265 75%","color":"#F8991D","sort":4.0},{"section":"High Performance Culture","measure":"Active Career Development Plans","year":2025,"actual":"0.076","goal":"\u2265 7%","color":"#F8991D","sort":5.0},{"section":"High Performance Culture","measure":"Workforce Development","year":2025,"actual":"1","goal":"1","color":"#F8991D","sort":6.0},{"section":"High Performance Culture","measure":"Total Wellness Engagement (% Funded)","year":2025,"actual":"0.745","goal":"\u2265 80%","color":"#F8991D","sort":7.0},{"section":"Top Safety Performance","measure":"Community Safety Presentations","year":2026,"actual":"25","goal":"\u2265 25","color":"#00A8CD","sort":12.0},{"section":"High Performance Culture","measure":"Security Awareness Proficiency - out of 100","year":2025,"actual":"0.82","goal":"\u2265 79%","color":"#F8991D","sort":8.0},{"section":"High Performance Culture","measure":"Active Career Development Plans","year":2026,"actual":"0.053","goal":"\u2265 7%","color":"#F8991D","sort":9.0},{"section":"High Performance Culture","measure":"Workforce Development","year":2026,"actual":"0.6678","goal":"1","color":"#F8991D","sort":10.0},{"section":"High Performance Culture","measure":"Total Wellness Engagement (% Funded)","year":2026,"actual":"0.427","goal":"\u2265 80%","color":"#F8991D","sort":11.0},{"section":"High Performance Culture","measure":"Security Awareness Proficiency - out of 100","year":2026,"actual":"0.81","goal":"\u2265 82%","color":"#F8991D","sort":12.0},{"section":"High Performance Culture","measure":"Active Career Development Plans","year":2027,"actual":null,"goal":"\u2265 7%","color":"#F8991D","sort":13.0},{"section":"High Performance Culture","measure":"Workforce Development","year":2027,"actual":null,"goal":"1","color":"#F8991D","sort":14.0},{"section":"High Performance Culture","measure":"Total Wellness Engagement (% Funded)","year":2027,"actual":null,"goal":"\u2265 80%","color":"#F8991D","sort":15.0},{"section":"High Performance Culture","measure":"Security Awareness Proficiency - out of 100","year":2027,"actual":null,"goal":"\u2265 82%","color":"#F8991D","sort":16.0},{"section":"High Performance Culture","measure":"Active Career Development Plans","year":2028,"actual":null,"goal":"\u2265 7%","color":"#F8991D","sort":17.0},{"section":"Top Safety Performance","measure":"Days Away Restricted Transferred (DART)","year":2027,"actual":null,"goal":"0","color":"#00A8CD","sort":13.0},{"section":"High Performance Culture","measure":"Workforce Development","year":2028,"actual":null,"goal":"1","color":"#F8991D","sort":18.0},{"section":"High Performance Culture","measure":"Total Wellness Engagement (% Funded)","year":2028,"actual":null,"goal":"\u2265 85%","color":"#F8991D","sort":19.0},{"section":"High Performance Culture","measure":"Security Awareness Proficiency - out of 100","year":2028,"actual":null,"goal":"\u2265 84%","color":"#F8991D","sort":20.0},{"section":"High Performance Culture","measure":"Active Career Development Plans","year":2029,"actual":null,"goal":"\u2265 7%","color":"#F8991D","sort":21.0},{"section":"High Performance Culture","measure":"Workforce Development","year":2029,"actual":null,"goal":"1","color":"#F8991D","sort":22.0},{"section":"High Performance Culture","measure":"Total Wellness Engagement (% Funded)","year":2029,"actual":null,"goal":"\u2265 85%","color":"#F8991D","sort":23.0},{"section":"High Performance Culture","measure":"Security Awareness Proficiency - out of 100","year":2029,"actual":null,"goal":"\u2265 86%","color":"#F8991D","sort":24.0},{"section":"High Performance Culture","measure":"Active Career Development Plans","year":2030,"actual":null,"goal":"\u2265 7%","color":"#F8991D","sort":25.0},{"section":"High Performance Culture","measure":"Workforce Development","year":2030,"actual":null,"goal":"1","color":"#F8991D","sort":26.0},{"section":"High Performance Culture","measure":"Total Wellness Engagement (% Funded)","year":2030,"actual":null,"goal":"\u2265 85%","color":"#F8991D","sort":27.0},{"section":"Top Safety Performance","measure":"Rural Electric Safety Achievement Program (RESAP)","year":2027,"actual":null,"goal":"> 3.0","color":"#00A8CD","sort":14.0},{"section":"High Performance Culture","measure":"Security Awareness Proficiency - out of 100","year":2030,"actual":null,"goal":"\u2265 88%","color":"#F8991D","sort":28.0},{"section":"Top Safety Performance","measure":"Qualified Field Observer Inspections (Business, After Hours)","year":2027,"actual":null,"goal":"\u2265 150 , \u226525","color":"#00A8CD","sort":15.0},{"section":"Top Safety Performance","measure":"Community Safety Presentations","year":2027,"actual":null,"goal":"\u2265 25","color":"#00A8CD","sort":16.0},{"section":"Top Safety Performance","measure":"Days Away Restricted Transferred (DART)","year":2028,"actual":null,"goal":"0","color":"#00A8CD","sort":17.0},{"section":"Top Safety Performance","measure":"Rural Electric Safety Achievement Program (RESAP)","year":2028,"actual":null,"goal":"> 3.0","color":"#00A8CD","sort":18.0},{"section":"Top Safety Performance","measure":"Qualified Field Observer Inspections (Business, After Hours)","year":2028,"actual":null,"goal":"\u2265 150 , \u226525","color":"#00A8CD","sort":19.0},{"section":"Top Safety Performance","measure":"Rural Electric Safety Achievement Program (RESAP)","year":2024,"actual":"-","goal":"> 3.0","color":"#00A8CD","sort":2.0},{"section":"Top Safety Performance","measure":"Community Safety Presentations","year":2028,"actual":null,"goal":"\u2265 25","color":"#00A8CD","sort":20.0},{"section":"Top Safety Performance","measure":"Days Away Restricted Transferred (DART)","year":2029,"actual":null,"goal":"0","color":"#00A8CD","sort":21.0},{"section":"Top Safety Performance","measure":"Rural Electric Safety Achievement Program (RESAP)","year":2029,"actual":null,"goal":"> 3.0","color":"#00A8CD","sort":22.0},{"section":"Top Safety Performance","measure":"Qualified Field Observer Inspections (Business, After Hours)","year":2029,"actual":null,"goal":"\u2265 150 , \u226525","color":"#00A8CD","sort":23.0},{"section":"Top Safety Performance","measure":"Community Safety Presentations","year":2029,"actual":null,"goal":"\u2265 25","color":"#00A8CD","sort":24.0},{"section":"Top Safety Performance","measure":"Days Away Restricted Transferred (DART)","year":2030,"actual":null,"goal":"0","color":"#00A8CD","sort":25.0},{"section":"Top Safety Performance","measure":"Rural Electric Safety Achievement Program (RESAP)","year":2030,"actual":null,"goal":"> 3.0","color":"#00A8CD","sort":26.0},{"section":"Top Safety Performance","measure":"Qualified Field Observer Inspections (Business, After Hours)","year":2030,"actual":null,"goal":"\u2265 150 , \u226525","color":"#00A8CD","sort":27.0},{"section":"Top Safety Performance","measure":"Community Safety Presentations","year":2030,"actual":null,"goal":"\u2265 25","color":"#00A8CD","sort":28.0},{"section":"Exceptional Member Experience","measure":"American Customer Satisfaction Index (ACSI) - out of 100","year":2024,"actual":"90","goal":"\u2265 89","color":"#005A9C","sort":1.0},{"section":"Top Safety Performance","measure":"Qualified Field Observer Inspections (Business, After Hours)","year":2024,"actual":"174 , 29","goal":"\u2265 150 , \u226525","color":"#00A8CD","sort":3.0},{"section":"Exceptional Member Experience","measure":"Membership Loyalty Index - out of 100","year":2024,"actual":"91","goal":"\u2265 88","color":"#005A9C","sort":2.0},{"section":"Exceptional Member Experience","measure":"Co-op Voices Advocates","year":2024,"actual":"850","goal":"\u2265 850","color":"#005A9C","sort":3.0},{"section":"Exceptional Member Experience","measure":"Follow Up Survey Index - out of 5","year":2024,"actual":"4.18","goal":"\u2265 4.0","color":"#005A9C","sort":4.0},{"section":"Exceptional Member Experience","measure":"American Customer Satisfaction Index (ACSI) - out of 100","year":2025,"actual":"90","goal":"\u2265 90","color":"#005A9C","sort":1.0},{"section":"Exceptional Member Experience","measure":"Membership Loyalty Index - out of 100","year":2025,"actual":"91","goal":"\u2265 90","color":"#005A9C","sort":2.0},{"section":"Exceptional Member Experience","measure":"Co-op Voices Advocates","year":2025,"actual":"1096","goal":"\u2265 1,125","color":"#005A9C","sort":7.0},{"section":"Exceptional Member Experience","measure":"Follow Up Survey Index - out of 5","year":2025,"actual":"4.32","goal":"\u2265 4.1","color":"#005A9C","sort":8.0},{"section":"Exceptional Member Experience","measure":"American Customer Satisfaction Index (ACSI) - out of 100","year":2026,"actual":"92","goal":"\u2265 90","color":"#005A9C","sort":9.0},{"section":"Exceptional Member Experience","measure":"Membership Loyalty Index - out of 100","year":2026,"actual":"91","goal":"\u2265 90","color":"#005A9C","sort":10.0},{"section":"Exceptional Member Experience","measure":"Co-op Voices Advocates","year":2026,"actual":"1554","goal":"\u2265 1,400","color":"#005A9C","sort":11.0},{"section":"Top Safety Performance","measure":"Community Safety Presentations","year":2024,"actual":"27","goal":"\u2265 25","color":"#00A8CD","sort":4.0},{"section":"Exceptional Member Experience","measure":"Follow Up Survey Index - out of 5","year":2026,"actual":"4.34","goal":"\u2265 4.2","color":"#005A9C","sort":12.0},{"section":"Exceptional Member Experience","measure":"American Customer Satisfaction Index (ACSI) - out of 100","year":2027,"actual":null,"goal":"\u2265 90","color":"#005A9C","sort":13.0},{"section":"Exceptional Member Experience","measure":"Membership Loyalty Index - out of 100","year":2027,"actual":null,"goal":"\u2265 90","color":"#005A9C","sort":14.0},{"section":"Exceptional Member Experience","measure":"Co-op Voices Advocates","year":2027,"actual":null,"goal":"\u2265 1,675","color":"#005A9C","sort":15.0},{"section":"Exceptional Member Experience","measure":"Follow Up Survey Index - out of 5","year":2027,"actual":null,"goal":"\u2265 4.3","color":"#005A9C","sort":16.0},{"section":"Exceptional Member Experience","measure":"American Customer Satisfaction Index (ACSI) - out of 100","year":2028,"actual":null,"goal":"\u2265 90","color":"#005A9C","sort":17.0},{"section":"Exceptional Member Experience","measure":"Membership Loyalty Index - out of 100","year":2028,"actual":null,"goal":"\u2265 90","color":"#005A9C","sort":18.0},{"section":"Exceptional Member Experience","measure":"Co-op Voices Advocates","year":2028,"actual":null,"goal":"\u2265 1,950","color":"#005A9C","sort":19.0},{"section":"Exceptional Member Experience","measure":"Follow Up Survey Index - out of 5","year":2028,"actual":null,"goal":"\u2265 4.4","color":"#005A9C","sort":20.0},{"section":"Exceptional Member Experience","measure":"American Customer Satisfaction Index (ACSI) - out of 100","year":2029,"actual":null,"goal":"\u2265 90","color":"#005A9C","sort":21.0},{"section":"Top Safety Performance","measure":"Days Away Restricted Transferred (DART)","year":2025,"actual":"3.36","goal":"0","color":"#00A8CD","sort":5.0},{"section":"Exceptional Member Experience","measure":"Membership Loyalty Index - out of 100","year":2029,"actual":null,"goal":"\u2265 90","color":"#005A9C","sort":22.0},{"section":"Exceptional Member Experience","measure":"Co-op Voices Advocates","year":2029,"actual":null,"goal":"\u2265 2,225","color":"#005A9C","sort":23.0},{"section":"Exceptional Member Experience","measure":"Follow Up Survey Index - out of 5","year":2029,"actual":null,"goal":"\u2265 4.5","color":"#005A9C","sort":24.0},{"section":"Exceptional Member Experience","measure":"American Customer Satisfaction Index (ACSI) - out of 100","year":2030,"actual":null,"goal":"\u2265 90","color":"#005A9C","sort":25.0},{"section":"Exceptional Member Experience","measure":"Membership Loyalty Index - out of 100","year":2030,"actual":null,"goal":"\u2265 90","color":"#005A9C","sort":26.0},{"section":"Exceptional Member Experience","measure":"Co-op Voices Advocates","year":2030,"actual":null,"goal":"\u2265 2,500","color":"#005A9C","sort":27.0},{"section":"Exceptional Member Experience","measure":"Follow Up Survey Index - out of 5","year":2030,"actual":null,"goal":"\u2265 4.5","color":"#005A9C","sort":28.0},{"section":"Affordable Service","measure":"Controllable Expense Per Consumer - Compared to Nation","year":2024,"actual":"0.0764","goal":"< 10%","color":"#7DB045","sort":1.0},{"section":"Affordable Service","measure":"Power Cost as a % of Revenue","year":2024,"actual":"0.7691","goal":"> 77%","color":"#7DB045","sort":2.0},{"section":"Affordable Service","measure":"Average Consumer per Employee - Compared to Nation","year":2024,"actual":"0.029","goal":"< 5%","color":"#7DB045","sort":3.0},{"section":"Top Safety Performance","measure":"Rural Electric Safety Achievement Program (RESAP)","year":2025,"actual":"3.1","goal":"> 3.0","color":"#00A8CD","sort":6.0},{"section":"Affordable Service","measure":"Rates - Measured by Quartile Compared to Colorado","year":2024,"actual":"1st","goal":"1st","color":"#7DB045","sort":4.0},{"section":"Affordable Service","measure":"Controllable Expense Per Consumer - Compared to Nation","year":2025,"actual":"0.0434","goal":"< 10%","color":"#7DB045","sort":5.0},{"section":"Affordable Service","measure":"Power Cost as a % of Revenue","year":2025,"actual":"0.79","goal":"> 77%","color":"#7DB045","sort":6.0},{"section":"Affordable Service","measure":"Average Consumer per Employee - Compared to Nation","year":2025,"actual":"0.03","goal":"< 5%","color":"#7DB045","sort":7.0},{"section":"Affordable Service","measure":"Rates - Measured by Quartile Compared to Colorado","year":2025,"actual":"1st","goal":"1st","color":"#7DB045","sort":8.0},{"section":"Affordable Service","measure":"Controllable Expense Per Consumer - Compared to Nation","year":2026,"actual":"0.065","goal":"< 10%","color":"#7DB045","sort":9.0},{"section":"Affordable Service","measure":"Power Cost as a % of Revenue","year":2026,"actual":"0.7855","goal":"> 77%","color":"#7DB045","sort":10.0},{"section":"Affordable Service","measure":"Average Consumer per Employee - Compared to Nation","year":2026,"actual":"0.0258","goal":"< 5%","color":"#7DB045","sort":11.0},{"section":"Affordable Service","measure":"Rates - Measured by Quartile Compared to Colorado","year":2026,"actual":"1st","goal":"1st","color":"#7DB045","sort":12.0},{"section":"Affordable Service","measure":"Controllable Expense Per Consumer - Compared to Nation","year":2027,"actual":null,"goal":"< 10%","color":"#7DB045","sort":13.0},{"section":"Top Safety Performance","measure":"Qualified Field Observer Inspections (Business, After Hours)","year":2025,"actual":"159 , 26","goal":"\u2265 150 , \u226525","color":"#00A8CD","sort":7.0},{"section":"Affordable Service","measure":"Power Cost as a % of Revenue","year":2027,"actual":null,"goal":"> 77%","color":"#7DB045","sort":14.0},{"section":"Affordable Service","measure":"Average Consumer per Employee - Compared to Nation","year":2027,"actual":null,"goal":"< 5.0%","color":"#7DB045","sort":15.0},{"section":"Affordable Service","measure":"Rates - Measured by Quartile Compared to Colorado","year":2027,"actual":null,"goal":"1st","color":"#7DB045","sort":16.0},{"section":"Affordable Service","measure":"Controllable Expense Per Consumer - Compared to Nation","year":2028,"actual":null,"goal":"< 10%","color":"#7DB045","sort":17.0},{"section":"Affordable Service","measure":"Power Cost as a % of Revenue","year":2028,"actual":null,"goal":"> 77%","color":"#7DB045","sort":18.0},{"section":"Affordable Service","measure":"Average Consumer per Employee - Compared to Nation","year":2028,"actual":null,"goal":"< 5.0%","color":"#7DB045","sort":19.0},{"section":"Affordable Service","measure":"Rates - Measured by Quartile Compared to Colorado","year":2028,"actual":null,"goal":"1st","color":"#7DB045","sort":20.0},{"section":"Affordable Service","measure":"Controllable Expense Per Consumer - Compared to Nation","year":2029,"actual":null,"goal":"< 10%","color":"#7DB045","sort":21.0},{"section":"Affordable Service","measure":"Power Cost as a % of Revenue","year":2029,"actual":null,"goal":"> 77%","color":"#7DB045","sort":22.0},{"section":"Affordable Service","measure":"Average Consumer per Employee - Compared to Nation","year":2029,"actual":null,"goal":"< 5.0%","color":"#7DB045","sort":23.0},{"section":"Top Safety Performance","measure":"Community Safety Presentations","year":2025,"actual":"29","goal":"\u2265 25","color":"#00A8CD","sort":8.0},{"section":"Affordable Service","measure":"Rates - Measured by Quartile Compared to Colorado","year":2029,"actual":null,"goal":"1st","color":"#7DB045","sort":24.0},{"section":"Affordable Service","measure":"Controllable Expense Per Consumer - Compared to Nation","year":2030,"actual":null,"goal":"< 10%","color":"#7DB045","sort":25.0},{"section":"Affordable Service","measure":"Power Cost as a % of Revenue","year":2030,"actual":null,"goal":"> 77%","color":"#7DB045","sort":26.0},{"section":"Affordable Service","measure":"Average Consumer per Employee - Compared to Nation","year":2030,"actual":null,"goal":"< 5.0%","color":"#7DB045","sort":27.0},{"section":"Affordable Service","measure":"Rates - Measured by Quartile Compared to Colorado","year":2030,"actual":null,"goal":"1st","color":"#7DB045","sort":28.0},{"section":"Utility of the Future","measure":"System Average Interruption Duration Index (SAIDI)","year":2024,"actual":"74.22","goal":"\u2264 50","color":"#D73647","sort":1.0},{"section":"Utility of the Future","measure":"Consumers Experiencing Multiple Interruptions (% Below CEMI-3)","year":2024,"actual":"0.9347","goal":"\u2265 92%","color":"#D73647","sort":2.0},{"section":"Utility of the Future","measure":"Carbon Free Generation","year":2024,"actual":"0.35","goal":"\u2265 35%","color":"#D73647","sort":3.0},{"section":"Utility of the Future","measure":"Virtual Power Plant Total MW's Available","year":2024,"actual":"2.62","goal":"\u2265 2","color":"#D73647","sort":4.0},{"section":"Utility of the Future","measure":"System Average Interruption Duration Index (SAIDI)","year":2025,"actual":"48.5","goal":"\u2264 50","color":"#D73647","sort":5.0},{"section":"Top Safety Performance","measure":"Days Away Restricted Transferred (DART)","year":2026,"actual":"1.14","goal":"0","color":"#00A8CD","sort":9.0},{"section":"Utility of the Future","measure":"Consumers Experiencing Multiple Interruptions (% Below CEMI-3)","year":2025,"actual":"0.9745","goal":"\u2265 93%","color":"#D73647","sort":6.0},{"section":"Utility of the Future","measure":"Carbon Free Generation","year":2025,"actual":"0.35","goal":"\u2265 50%","color":"#D73647","sort":7.0},{"section":"Utility of the Future","measure":"Virtual Power Plant Total MW's Available","year":2025,"actual":"5.18","goal":"\u2265 4","color":"#D73647","sort":8.0},{"section":"Utility of the Future","measure":"System Average Interruption Duration Index (SAIDI)","year":2026,"actual":"26.9","goal":"\u2264 50","color":"#D73647","sort":9.0},{"section":"Utility of the Future","measure":"Consumers Experiencing Multiple Interruptions (% Below CEMI-3)","year":2026,"actual":"0.9822","goal":"\u2265 94%","color":"#D73647","sort":10.0},{"section":"Utility of the Future","measure":"Carbon Free Generation","year":2026,"actual":"0.5","goal":"\u2265 50%","color":"#D73647","sort":11.0},{"section":"Utility of the Future","measure":"Virtual Power Plant Total MW's Available","year":2026,"actual":"6.9","goal":"\u2265 8","color":"#D73647","sort":12.0},{"section":"Utility of the Future","measure":"System Average Interruption Duration Index (SAIDI)","year":2027,"actual":null,"goal":"\u2264 50","color":"#D73647","sort":13.0},{"section":"Utility of the Future","measure":"Consumers Experiencing Multiple Interruptions (% Below CEMI-3)","year":2027,"actual":null,"goal":"\u2265 95%","color":"#D73647","sort":14.0},{"section":"Utility of the Future","measure":"Carbon Free Generation","year":2027,"actual":null,"goal":"\u2265 50%","color":"#D73647","sort":15.0}]};
-let DB = DB_SNAPSHOT;  // replaced by the SQL payload as soon as it is parsed
+let DB = DB_SNAPSHOT;  // swapped to live data when SharePoint fetch succeeds
 
 /* ============ STATUS ENGINE ============ */
 const Engine = (function(){
@@ -231,8 +218,7 @@ const Engine = (function(){
   };
   function parseNum(s){
     if(s==null) return null;
-    // strip thousands separators ("1,554" -> "1554") but keep dual values ("174 , 29")
-    s=String(s).trim().replace(/(\d),(?=\d{3}(\D|$))/g,'$1');
+    s=String(s).trim();
     if(/\d(st|nd|rd|th)\b/i.test(s)) return {ordinal:s.toLowerCase()};
     const first=s.split(',')[0];
     const pct=/%/.test(first);
@@ -242,7 +228,7 @@ const Engine = (function(){
   }
   function parseGoal(g){
     if(g==null) return null;
-    g=String(g).trim().replace(/(\d),(?=\d{3}(\D|$))/g,'$1');
+    g=String(g).trim();
     if(/\d(st|nd|rd|th)\b/i.test(g)) return {ordinal:g.toLowerCase(),op:'='};
     let op='>=';
     if(/^≤|<=/.test(g)) op='<=';
@@ -438,7 +424,7 @@ const App=(function(){
     const tickNote = year===new Date().getFullYear()
       ? ` &middot; The &#9474; tick marks expected pace-to-date for in-progress cumulative goals (as of ${asOf}), or the goal line for other measures`
       : ` &middot; The &#9474; tick marks the goal line`;
-    document.getElementById('footNote').innerHTML=`Showing ${year} performance vs ${cmp} &middot; Data source: <b>Azure SQL &middot; dbo.GlobalMeasures</b> (${DB.records.length} records) &middot; Colors &amp; type per PVREA Brand Standards Guide${tickNote}`;
+    document.getElementById('footNote').innerHTML=`Showing ${year} performance vs ${cmp} &middot; Data source: <b>GlobalMeasures</b> SharePoint List (${DB.records.length} records) &middot; Colors &amp; type per PVREA Brand Standards Guide${tickNote}`;
   }
   function renderSummary(counts,year){
     const total=counts.met+counts.track+counts.jeopardy+counts.off+counts.nodata;
@@ -498,7 +484,7 @@ const Report=(function(){
   </style>`;
   function buildDoc(title,inner){
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title>${CSS}</head>
-      <body><div class="sheet">${inner}<div class="foot">Poudre Valley REA &middot; Generated ${new Date().toLocaleDateString()} &middot; Source: Azure SQL &middot; dbo.GlobalMeasures &middot; Confidential</div></div></body></html>`;
+      <body><div class="sheet">${inner}<div class="foot">Poudre Valley REA &middot; Generated ${new Date().toLocaleDateString()} &middot; Source: GlobalMeasures SharePoint List &middot; Confidential</div></div></body></html>`;
   }
   function open(title,inner){
     const html=buildDoc(title,inner);
@@ -744,7 +730,7 @@ const Chat=(function(){
     // specific measure lookup
     const measure=DB.records.find(r=>{const mm=r.measure.toLowerCase();return mm.includes(t.replace(/[^a-z ]/g,'').trim())&&t.length>4;});
     // trend for a keyword (e.g. SAIDI)
-    const kw=['saidi','dart','resap','acsi','carbon','wellness','loyalty','cemi','outages','multiple outages','vpp','virtual power','security','workforce','career','advocates','survey','presentations','inspections'];
+    const kw=['saidi','dart','resap','acsi','carbon','wellness','loyalty','cemi','vpp','virtual power','security','workforce','career','advocates','survey','presentations','inspections'];
     const hitKw=kw.find(k=>t.includes(k));
     if((t.includes('trend')||t.includes('trending')||t.includes('over time'))&&hitKw){
       const rec=DB.records.find(r=>r.measure.toLowerCase().includes(hitKw)||r.measure.toLowerCase().replace(/[^a-z]/g,'').includes(hitKw.replace(/[^a-z]/g,'')));
@@ -783,194 +769,105 @@ const Chat=(function(){
   }
   function send(){const i=document.getElementById('chatInput');const q=i.value.trim();if(!q)return;add(q,'user');i.value='';setTimeout(()=>add(answer(q),'bot'),200);}
   function init(){
-    add(`Hi Scott 👋 I'm your Measures Assistant. I can interrogate the live GlobalMeasures data — filter by pillar, status, year, or ask about a specific measure. What would you like to know?`,'bot');
+    add(`Hi Scott 👋 I'm your Measures Assistant. I can interrogate the raw GlobalMeasures data — filter by pillar, status, year, or ask about a specific measure. What would you like to know?`,'bot');
     const s=document.getElementById('chatSuggest');
     suggestions.forEach(q=>{const b=document.createElement('button');b.textContent=q;b.onclick=()=>{document.getElementById('chatInput').value=q;send();};s.appendChild(b);});
   }
   return {toggle,send,init};
 })();
 
-/* ============ AZURE SQL DATA SOURCE (via Flask) ============ */
-const Data=(function(){
-
+/* ============ LIVE SHAREPOINT DATA SOURCE ============ */
+const SP=(function(){
   const CONFIG={
-    // Endpoint used by the "Refresh live data" button. Return the same
-    // row shape as the injected payload:  @app.route('/api/measures')
-    apiUrl:'/api/measures',
-    autoRefreshMinutes:0     // e.g. 10 to re-poll while the page is open
+    // Edit here if the site path or list name ever changes:
+    siteUrl:'https://poudrevalleyrea.sharepoint.com/sites/BusinessProcess-',
+    listName:'GlobalMeasures',
+    autoRefreshMinutes:0   // set to e.g. 10 for auto-refresh while the page is open
   };
-
-  const SECTION_ORDER=[
-    "Top Safety Performance",
-    "Exceptional Member Experience",
-    "Affordable Service",
-    "Utility of the Future",
-    "High Performance Culture"
-  ];
-
-  const SECTION_COLORS={
-    "Top Safety Performance":"#00A8CD",
-    "Exceptional Member Experience":"#005A9C",
-    "Affordable Service":"#7DB045",
-    "Utility of the Future":"#D73647",
-    "High Performance Culture":"#F8991D"
-  };
-
+  const SECTION_COLORS={"Top Safety Performance":"#00A8CD","Exceptional Member Experience":"#005A9C","Affordable Service":"#7DB045","Utility of the Future":"#D73647","High Performance Culture":"#F8991D"};
   let timer=null;
-
   function setStatus(state,msg){
     const el=document.getElementById('dsStatus'); if(!el)return;
     const c={live:'#2ecc71',cached:'#F8991D',loading:'#00A8CD',error:'#D73647'}[state]||'#808285';
     el.querySelector('.ds-dot').style.background=c;
     el.querySelector('.ds-text').innerHTML=msg;
   }
-
-  /* --- value cleaning: SQL NULLs, empty strings, "-" placeholders --- */
-  function clean(v){
-    if(v===undefined||v===null) return null;
-    const s=String(v).trim();
-    if(!s||s.toUpperCase()==='NULL'||s==='-') return null;
-    return s;
-  }
-
-  /* --- case-insensitive column lookup so SELECT * ordering never matters --- */
-  function col(row,names){
-    const keys=Object.keys(row||{});
-    for(const n of names){
-      const k=keys.find(x=>x.toLowerCase()===n.toLowerCase());
-      if(k!==undefined){
-        const v=clean(row[k]);
-        if(v!==null) return v;
+  function serverRelative(){
+    // Prefer the current site if the page is hosted inside SharePoint, else use CONFIG.
+    try{
+      if(location.hostname.endsWith('sharepoint.com')){
+        const parts=location.pathname.split('/'); const i=parts.indexOf('sites');
+        if(i>=0&&parts[i+1]) return '/'+parts[i]+'/'+parts[i+1];
       }
+    }catch(e){}
+    try{ return new URL(CONFIG.siteUrl).pathname.replace(/\/$/,''); }catch(e){ return ''; }
+  }
+  function pick(item,names){
+    const keys=Object.keys(item);
+    for(const n of names){
+      const k=keys.find(k=>k.toLowerCase()===n.toLowerCase());
+      if(k!==undefined&&item[k]!==null&&item[k]!=='') return item[k];
     }
     return null;
   }
-
-  function numeric(v,fallback){
-    if(v===undefined||v===null||v==='') return fallback;
-    const n=parseFloat(String(v).replace(/[^0-9.\-]/g,''));
-    return isNaN(n)?fallback:n;
-  }
-
-  /* --- map dbo.GlobalMeasures rows onto the dashboard record shape --- */
-  function mapRows(rows){
+  function mapItems(items){
     const recs=[];
-    (rows||[]).forEach(row=>{
-      const pillar  = col(row,['Pillar','Section','Title']);
-      const measure = col(row,['Measure','MeasureName']);
-      const yearRaw = col(row,['MeasureYear','Year']);
-      if(!pillar||!measure||yearRaw==null) return;
-
+    items.forEach(it=>{
+      const f = it.fields ? it.fields : it;   // Graph vs REST shape
+      const section=pick(f,['Section','field_1']);
+      const measure=pick(f,['Measure','field_2']);
+      const yearRaw=pick(f,['Year','field_3']);
+      if(!section||!measure||yearRaw==null) return;
       const year=parseInt(String(yearRaw).replace(/[^0-9]/g,''));
       if(isNaN(year)) return;
-
-      const sec=String(pillar).trim();
-      recs.push({
-        section : sec,
-        measure : String(measure).trim(),
-        year    : year,
-        actual  : col(row,['ActualValue','Actual']),
-        goal    : col(row,['TargetValue','Goal','Target']),
-        color   : SECTION_COLORS[sec]||'#808285',
-        sort    : numeric(col(row,['MeasureSort','SortOrder']),9999),
-        yearSort: numeric(col(row,['YearSort']),9999),
-        id      : numeric(col(row,['GlobalMeasureID']),null)
-      });
-    });
-
-    // pillar order first, then MeasureSort, then year -> keeps cards in scorecard order
-    recs.sort((a,b)=>{
-      const pa=SECTION_ORDER.indexOf(a.section), pb=SECTION_ORDER.indexOf(b.section);
-      return ((pa<0?99:pa)-(pb<0?99:pb))
-          || (a.sort-b.sort)
-          || (a.year-b.year)
-          || a.measure.localeCompare(b.measure);
+      const actual=pick(f,['Actual','field_4']);
+      const goal=pick(f,['Goal','field_5']);
+      const sec=String(section).trim();
+      recs.push({section:sec,measure:String(measure).trim(),year,
+        actual:actual==null?null:String(actual).trim(),
+        goal:goal==null?null:String(goal).trim(),
+        color:SECTION_COLORS[sec]||'#808285'});
     });
     return recs;
   }
-
-  function build(recs){
-    // pillars actually present, in the canonical order, then any extras
-    const present=[...new Set(recs.map(r=>r.section))];
-    const order=SECTION_ORDER.filter(s=>present.includes(s))
-                .concat(present.filter(s=>!SECTION_ORDER.includes(s)));
-    const colors={};
-    order.forEach((s,i)=>{ colors[s]=SECTION_COLORS[s]||['#005A9C','#00A8CD','#7DB045','#D73647','#F8991D'][i%5]; });
-    const years=[...new Set(recs.map(r=>r.year))].sort((a,b)=>a-b);
-    return {sectionOrder:order,pillarColors:colors,records:recs,years:years};
+  async function fetchAll(){
+    const base=serverRelative()+"/_api/web/lists/getbytitle('"+CONFIG.listName+"')/items";
+    const url=base+"?$top=2000&$select=*";
+    const res=await fetch(url,{headers:{'Accept':'application/json;odata=nometadata'},credentials:'same-origin'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const json=await res.json();
+    const items=json.value||(json.d&&json.d.results)||[];
+    if(!items.length) throw new Error('list returned no items');
+    return items;
   }
-
-  function apply(recs,label){
-    DB=build(recs);
-    App.reload();
-    setStatus('live','<b>Live</b> &middot; '+recs.length+' rows &middot; '+label+' '+new Date().toLocaleTimeString());
-  }
-
-  function fallback(msg){
-    DB=DB_SNAPSHOT;
-    App.reload();
-    setStatus('cached','Cached snapshot &middot; '+msg);
-  }
-
-  /* --- 1) read the JSON Flask rendered into the page --- */
-  function loadInjected(){
-    setStatus('loading','Reading SQL payload&hellip;');
-    const el=document.getElementById('sqlData');
-    if(!el){ fallback('no #sqlData block in the template'); return false; }
-    const raw=(el.textContent||'').trim();
-    // if the page was opened directly the Jinja tag is still literal ("{" + "{ metrics_json ...")
-    const OPEN='{'+'{';
-    if(!raw||raw==='null'||raw.indexOf(OPEN)===0){
-      fallback('serve this page through Flask so metrics_json is rendered');
-      return false;
-    }
+  async function load(manual){
+    setStatus('loading','Connecting to SharePoint&hellip;');
     try{
-      const payload=JSON.parse(raw);
-      const rows=Array.isArray(payload)?payload:(payload.records||payload.data||payload.value||[]);
-      const recs=mapRows(rows);
-      if(!recs.length){ fallback('SQL payload contained no usable rows &mdash; check column names'); return false; }
-      apply(recs,'loaded');
-      return true;
+      const items=await fetchAll();
+      const recs=mapItems(items);
+      if(!recs.length) throw new Error('no rows mapped (check column names)');
+      const years=[...new Set(recs.map(r=>r.year))].sort((a,b)=>a-b);
+      DB={sectionOrder:DB_SNAPSHOT.sectionOrder,pillarColors:DB_SNAPSHOT.pillarColors,records:recs,years};
+      App.reload();
+      setStatus('live','<b>Live</b> &middot; '+recs.length+' records &middot; '+new Date().toLocaleTimeString());
     }catch(e){
-      console.warn('[GlobalMeasures] could not parse injected JSON',e);
-      fallback('injected JSON could not be parsed (see console)');
-      return false;
+      DB=DB_SNAPSHOT; App.reload();
+      const why = (location.protocol==='file:') ? 'opened as a local file' :
+                  (!location.hostname.endsWith('sharepoint.com')) ? 'not hosted in SharePoint' : e.message;
+      setStatus('cached','Last updated: <strong data-lexical-text="true">Aug 20, 2026, 2:47 PM </strong><em class="___11wyd0v f1j4dglz" data-lexical-text="true">Azure REST API Integration coming soon\' </em>');
+      if(manual) console.warn('[SP live load failed]',e);
     }
   }
-
-  /* --- 2) re-query on demand through the Flask API --- */
-  async function refresh(manual=true){
-    setStatus('loading','Re-querying dbo.GlobalMeasures&hellip;');
-    try{
-      const res=await fetch(CONFIG.apiUrl,{cache:'no-store',headers:{'Accept':'application/json'}});
-      if(!res.ok) throw new Error('HTTP '+res.status+' from '+CONFIG.apiUrl);
-      const payload=await res.json();
-      const rows=Array.isArray(payload)?payload:(payload.records||payload.data||payload.value||[]);
-      const recs=mapRows(rows);
-      if(!recs.length) throw new Error('API returned no usable rows');
-      apply(recs,'refreshed');
-    }catch(e){
-      console.warn('[GlobalMeasures] refresh failed',e);
-      setStatus('error','Refresh failed &middot; '+e.message+' &middot; showing last good data');
-      if(manual) alert('Refresh failed: '+e.message+'\nAdd an /api/measures route to app.py, or reload the page.');
-    }
-  }
-
-  function startAuto(){
-    if(CONFIG.autoRefreshMinutes>0){
-      clearInterval(timer);
-      timer=setInterval(()=>refresh(false),CONFIG.autoRefreshMinutes*60000);
-    }
-  }
-
-  return {loadInjected,refresh,startAuto,setStatus,mapRows,CONFIG};
+  function startAuto(){ if(CONFIG.autoRefreshMinutes>0){ clearInterval(timer); timer=setInterval(()=>load(false),CONFIG.autoRefreshMinutes*60000); } }
+  return {load,startAuto,setStatus,CONFIG};
 })();
+
 /* ============ BOOT ============ */
 App.initControls();
 App.render();
 Chat.init();
-Data.loadInjected();   // read the JSON Flask rendered into #sqlData (snapshot fallback)
-Data.startAuto();
+SP.load(false);      // attempt live SharePoint data; falls back to snapshot automatically
+SP.startAuto();
 </script>
 </body>
 </html>

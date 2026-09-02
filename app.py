@@ -1,5 +1,7 @@
 import os
 import mssql_python
+import datetime
+import json
 from dotenv import load_dotenv
 from azure.appconfiguration.provider import load
 from azure.identity import ManagedIdentityCredential
@@ -13,57 +15,42 @@ load_dotenv()
 
 CONNECTION_STRING = os.getenv("CONNECTION_STRING")
 
-def execute_query(query=None):
-    query = """
-        SELECT *
-        FROM [dbo].[GlobalMeasures]
-        Where MeasureYear = '2026'
-        AND Pillar = 'Top Safety Performance'
-        AND Measure = 'Days Away Restricted Transferred (DART)'
-    """
-
+def execute_query(query, params=None):
     rows = []
 
     with mssql_python.connect(CONNECTION_STRING) as conn:
         cursor = conn.cursor()
-        # Replace with your real query. Use parameters (cursor.execute(sql, params))
-        # for anything derived from the request instead of string-formatting it in.
-        cursor.execute(query)
+
+        if params:
+            cursor.execute(query, params)
+        else:
+            cursor.execute(query)
 
         columns = [col[0] for col in cursor.description]
         rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
-        print(rows)
 
     return rows
- 
-
- 
 
 @app.route('/')
 def index():
 
-    rows = execute_query()
-    actual_value = rows[0].get("ActualValue")
-   
-    print('Request for index page received')
-    return render_template('index.html', actual_value=actual_value)
+    query = """
+        SELECT
+            Pillar,
+            Measure,
+            MeasureYear,
+            ActualValue,
+            TargetValue,
+            GlobalMeasureID,
+            MeasureSort,
+            YearSort
+        FROM dbo.GlobalMeasures
+        ORDER BY MeasureSort, MeasureYear
+    """
 
-@app.route('/test')
-def test():
+    rows = execute_query(query)
 
-    return render_template('test.html')
-
-@app.route('/test2')
-def test2():
-    print("IDENTITY_ENDPOINT:", os.environ.get("IDENTITY_ENDPOINT"))
-    print("IDENTITY_HEADER present:", "IDENTITY_HEADER" in os.environ)
- 
-    try:
-        token = ManagedIdentityCredential().get_token("https://database.windows.net/.default")
-        print("SUCCESS:", token.token[:30])
-    except Exception as e:
-        print("FAILED:", e)
-    return render_template('test2.html')
+    return render_template('index.html', metrics_json=json.dumps(rows))
 
 
 @app.route('/favicon.ico')
