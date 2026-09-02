@@ -52,6 +52,25 @@ def index():
 
     return render_template('index.html', metrics_json=json.dumps(rows))
 
+@app.route('/api/measures')
+def api_measures():
+
+    query = """
+        SELECT
+            Pillar,
+            Measure,
+            MeasureYear,
+            ActualValue,
+            TargetValue,
+            GlobalMeasureID,
+            MeasureSort,
+            YearSort
+        FROM dbo.GlobalMeasures
+        ORDER BY MeasureSort, MeasureYear
+    """
+
+    return execute_query(query)
+
 
 @app.route('/favicon.ico')
 def favicon():
