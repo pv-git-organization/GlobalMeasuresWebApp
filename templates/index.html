@@ -105,7 +105,7 @@ main{max-width:1400px;margin:0 auto;padding:22px 26px 60px}
 .msg.bot table{border-collapse:collapse;margin-top:6px;font-size:11.5px;width:100%}
 .msg.bot td,.msg.bot th{border:1px solid var(--line);padding:3px 6px;text-align:left}
 .msg.bot th{background:#eef2f5}
-.chat-suggest{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px;background:#fff;border-top:1px solid var(--line)}
+.chat-suggest{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px;background:#fff;border-top:1px solid var(--line);max-height:104px;overflow-y:auto}
 .chat-suggest button{font-size:11px;background:#eef2f5;border:1px solid var(--line);border-radius:14px;padding:5px 10px;color:var(--pv-blue);font-weight:600}
 .chat-input{display:flex;border-top:1px solid var(--line);padding:10px}
 .chat-input input{flex:1;border:1px solid var(--line);border-radius:20px;padding:9px 14px;font-size:13px;outline:none}
@@ -190,7 +190,7 @@ main{max-width:1400px;margin:0 auto;padding:22px 26px 60px}
 <button id="chatFab" onclick="Chat.toggle()" title="Ask the data"><img src="/static/wattsworth.png" alt="Wattsworth AI Assistant"></button>
 <div id="chatPanel" class="hidden">
   <div class="chat-head">
-    <div><b>Measures Assistant</b><br><small>Ask me anything about the data</small></div>
+    <div><b>Flash the Fact Finder</b><br><small>Ask me anything about the data</small></div>
     <button onclick="Chat.toggle()">&times;</button>
   </div>
   <div class="chat-body" id="chatBody"></div>
@@ -792,76 +792,392 @@ const Report=(function(){
   return {executive,onepage,concerns,pillar,trend};
 })();
 
-/* ============ CHATBOT (offline, rule-based over the data) ============ */
+/* ============ CHATBOT — "Flash the Fact Finder" ============
+   Offline, rule-based NLU over dbo.GlobalMeasures.
+   ~50 dynamic intents + fuzzy (typo-tolerant) keyword matching.
+   ============================================================ */
 const Chat=(function(){
-  const suggestions=['What is in jeopardy in 2026?','Show me safety measures','Which goals did we meet?','How is SAIDI trending?','Summarize Affordable Service'];
+
+  /* ---------- selectable starter questions (10) ---------- */
+  const suggestions=[
+    "How are we doing overall?",
+    "What's in jeopardy this year?",
+    "Which goals did we meet?",
+    "What's off track?",
+    "Show me safety measures",
+    "Summarize Affordable Service",
+    "How is SAIDI trending?",
+    "Best and worst pillar?",
+    "What changed vs last year?",
+    "What can you do?"
+  ];
+
+  /* ---------- panel plumbing ---------- */
   function toggle(){document.getElementById('chatPanel').classList.toggle('hidden');}
   function add(html,who){const b=document.getElementById('chatBody');const d=document.createElement('div');d.className='msg '+who;d.innerHTML=html;b.appendChild(d);b.scrollTop=b.scrollHeight;}
+
+  /* ---------- generic data helpers ---------- */
+  function allRows(year){const rows=[];DB.sectionOrder.forEach(sec=>measuresIn(sec).forEach(m=>{const r=recFor(m,year);if(r)rows.push({sec,m,r,ev:Engine.evaluate(r)});}));return rows;}
+  function tally(rows){const c={met:0,track:0,jeopardy:0,off:0,nodata:0};rows.forEach(x=>c[x.ev.status.key]++);return c;}
+  function measured(rows){return rows.length-tally(rows).nodata;}
+  function pct(n,d){return d?Math.round(n/d*100):0;}
   function yearFromText(t){const m=t.match(/20(2[4-9]|30)/);return m?parseInt(m[0]):App.currentYear();}
-  function tbl(list,year){
-    if(!list.length) return '<i>No matching measures.</i>';
+  function yearsInText(t){const m=t.match(/20(2[4-9]|30)/g)||[];return [...new Set(m.map(Number))];}
+  function latestDataYear(){let best=null;DB.records.forEach(r=>{if(r.actual!=null&&(best==null||r.year>best))best=r.year;});return best||App.currentYear();}
+  function tbl(list,year,cap){
+    cap=cap||12;
+    if(!list.length) return '<i>No measures matched that request.</i>';
     let h=`<table><tr><th>Measure</th><th>${year}</th><th>Goal</th><th>Status</th></tr>`;
-    list.slice(0,12).forEach(x=>{h+=`<tr><td>${x.m}</td><td>${x.r.actual??'—'}</td><td>${x.r.goal??'—'}</td><td style="color:${x.ev.status.hex};font-weight:700">${x.ev.status.label}</td></tr>`;});
+    list.slice(0,cap).forEach(x=>{h+=`<tr><td>${x.m}</td><td>${x.r.actual??'—'}</td><td>${x.r.goal??'—'}</td><td style="color:${x.ev.status.hex};font-weight:700">${x.ev.status.label}</td></tr>`;});
     h+='</table>';
-    if(list.length>12) h+=`<div style="font-size:11px;margin-top:4px">…and ${list.length-12} more</div>`;
+    if(list.length>cap) h+=`<div style="font-size:11px;margin-top:4px">…and ${list.length-cap} more.</div>`;
     return h;
   }
-  function allRows(year){const rows=[];DB.sectionOrder.forEach(sec=>measuresIn(sec).forEach(m=>{const r=recFor(m,year);if(r)rows.push({sec,m,r,ev:Engine.evaluate(r)});}));return rows;}
   function pillarMatch(t){
-    t=t.toLowerCase();
-    const map={'safety':'Top Safety Performance','member':'Exceptional Member Experience','experience':'Exceptional Member Experience','afford':'Affordable Service','cost':'Affordable Service','rate':'Affordable Service','utility':'Utility of the Future','future':'Utility of the Future','reliab':'Utility of the Future','culture':'High Performance Culture','workforce':'High Performance Culture','wellness':'High Performance Culture'};
+    const map={'safety':'Top Safety Performance','safe':'Top Safety Performance','injury':'Top Safety Performance',
+      'member':'Exceptional Member Experience','experience':'Exceptional Member Experience','customer':'Exceptional Member Experience','satisfaction':'Exceptional Member Experience',
+      'afford':'Affordable Service','cost':'Affordable Service','rate':'Affordable Service','expense':'Affordable Service','price':'Affordable Service',
+      'utility':'Utility of the Future','future':'Utility of the Future','reliab':'Utility of the Future','grid':'Utility of the Future','outage':'Utility of the Future',
+      'culture':'High Performance Culture','workforce':'High Performance Culture','wellness':'High Performance Culture','employee':'High Performance Culture','people':'High Performance Culture','hr':'High Performance Culture'};
     for(const k in map){if(t.includes(k))return map[k];}
     return null;
   }
-  function answer(q){
-    const t=q.toLowerCase(), year=yearFromText(t);
-    // specific measure lookup
-    const measure=DB.records.find(r=>{const mm=r.measure.toLowerCase();return mm.includes(t.replace(/[^a-z ]/g,'').trim())&&t.length>4;});
-    // trend for a keyword (e.g. SAIDI)
-    const kw=['saidi','dart','resap','acsi','carbon','wellness','loyalty','cemi','outages','multiple outages','vpp','virtual power','security','workforce','career','advocates','survey','presentations','inspections'];
-    const hitKw=kw.find(k=>t.includes(k));
-    if((t.includes('trend')||t.includes('trending')||t.includes('over time'))&&hitKw){
-      const rec=DB.records.find(r=>r.measure.toLowerCase().includes(hitKw)||r.measure.toLowerCase().replace(/[^a-z]/g,'').includes(hitKw.replace(/[^a-z]/g,'')));
-      if(rec){const m=rec.measure;let h=`<b>${m}</b> over time:<table><tr><th>Year</th><th>Actual</th><th>Goal</th></tr>`;DB.years.forEach(y=>{const r=recFor(m,y);h+=`<tr><td>${y}</td><td>${r&&r.actual!=null?r.actual:'—'}</td><td>${r?r.goal:'—'}</td></tr>`;});return h+'</table>';}
+  /* measure alias table — powers ~20 measure-specific answers + the glossary */
+  const ALIAS={
+    'saidi':['System Average Interruption Duration Index'],
+    'outage duration':['System Average Interruption Duration Index'],
+    'cemi':['Consumers Experiencing Multiple Interruptions'],
+    'multiple interruptions':['Consumers Experiencing Multiple Interruptions'],
+    'dart':['Days Away Restricted Transferred'],
+    'injury':['Days Away Restricted Transferred'],
+    'resap':['Rural Electric Safety Achievement Program'],
+    'qfo':['Qualified Field Observer'],
+    'observer':['Qualified Field Observer'],
+    'inspection':['Qualified Field Observer'],
+    'presentation':['Community Safety Presentations'],
+    'acsi':['American Customer Satisfaction Index'],
+    'satisfaction':['American Customer Satisfaction Index'],
+    'loyalty':['Membership Loyalty Index'],
+    'advocate':['Co-op Voices Advocates'],
+    'co-op voices':['Co-op Voices Advocates'],
+    'survey':['Follow Up Survey Index'],
+    'controllable expense':['Controllable Expense Per Consumer'],
+    'power cost':['Power Cost as a % of Revenue'],
+    'consumer per employee':['Average Consumer per Employee'],
+    'quartile':['Rates - Measured by Quartile'],
+    'rates':['Rates - Measured by Quartile'],
+    'carbon':['Carbon Free Generation'],
+    'renewable':['Carbon Free Generation'],
+    'vpp':["Virtual Power Plant"],
+    'virtual power':["Virtual Power Plant"],
+    'career':['Active Career Development Plans'],
+    'development plan':['Active Career Development Plans'],
+    'workforce':['Workforce Development'],
+    'wellness':['Total Wellness Engagement'],
+    'security':['Security Awareness Proficiency'],
+    'phishing':['Security Awareness Proficiency']
+  };
+  const GLOSSARY={
+    'saidi':'<b>SAIDI</b> — System Average Interruption Duration Index: the average total minutes of outage an average member experiences in a year. Lower is better; the PVREA goal is ≤ 50.',
+    'cemi':'<b>CEMI-3</b> — Consumers Experiencing Multiple Interruptions: we track the % of members who had <i>fewer than</i> three sustained interruptions. Higher is better.',
+    'dart':'<b>DART</b> — Days Away, Restricted or Transferred: an OSHA safety rate covering injuries that cost work days or require restricted duty. The goal is 0.',
+    'resap':'<b>RESAP</b> — Rural Electric Safety Achievement Program: NRECA\'s safety accreditation review. We target a score greater than 3.0.',
+    'acsi':'<b>ACSI</b> — American Customer Satisfaction Index: a nationally benchmarked member-satisfaction score out of 100.',
+    'vpp':"<b>VPP</b> — Virtual Power Plant: the total MW of dispatchable member-side resources (thermostats, batteries, water heaters) PVREA can call on.",
+    'qfo':'<b>QFO</b> — Qualified Field Observer inspections: documented field safety observations, tracked separately for business hours and after hours.'
+  };
+  function measureByAlias(t){
+    let best=null,bestLen=0;
+    for(const k in ALIAS){
+      if(t.includes(k)&&k.length>bestLen){best=ALIAS[k][0];bestLen=k.length;}
     }
-    // status queries
-    const statusMap=[['jeopard','jeopardy'],['at risk','jeopardy'],['off track','off'],['miss','off'],['met','met'],['achiev','met'],['track','track'],['on track','track']];
-    let stKey=null; for(const[a,b]of statusMap){if(t.includes(a)){stKey=b;break;}}
-    let rows=allRows(year);
-    const pil=pillarMatch(t);
-    if(pil) rows=rows.filter(x=>x.sec===pil);
-    if(stKey){
-      let filtered=rows.filter(x=>x.ev.status.key===stKey);
-      if(stKey==='off') filtered=rows.filter(x=>x.ev.status.key==='off'||x.ev.status.key==='jeopardy');
-      const lbl={jeopardy:'in jeopardy',off:'off track / at risk',met:'met',track:'tracking to meet'}[stKey];
-      return `Here are the measures <b>${lbl}</b> in <b>${year}</b>${pil?` for <b>${pil}</b>`:''} (${filtered.length}):${tbl(filtered,year)}`;
+    if(best){
+      const rec=DB.records.find(r=>r.measure.toLowerCase().includes(best.toLowerCase()));
+      if(rec) return rec.measure;
     }
-    // pillar summary
-    if(pil){
-      const c={met:0,track:0,jeopardy:0,off:0,nodata:0};rows.forEach(x=>c[x.ev.status.key]++);
-      return `<b>${pil}</b> in ${year}: ${c.met} met, ${c.track} tracking, ${c.jeopardy} in jeopardy, ${c.off} off track.${tbl(rows,year)}`;
-    }
-    // single measure detail
-    if(measure){const m=measure.measure;const r=recFor(m,year);const ev=Engine.evaluate(r);return `<b>${m}</b> (${year}): actual <b>${r.actual??'—'}</b> vs goal <b>${r.goal??'—'}</b> — <span style="color:${ev.status.hex};font-weight:700">${ev.status.label}</span>.`;}
-    // overall summary
-    if(t.includes('summar')||t.includes('overview')||t.includes('how are we')||t.includes('overall')){
-      const c={met:0,track:0,jeopardy:0,off:0,nodata:0};rows.forEach(x=>c[x.ev.status.key]++);const wd=rows.length-c.nodata;
-      return `<b>${year} overall:</b> ${c.met}/${wd} goals met (${wd?Math.round(c.met/wd*100):0}%), ${c.track} tracking, ${c.jeopardy} in jeopardy, ${c.off} off track. Ask me about any pillar or measure for detail.`;
-    }
-    if(t.includes('help')||t.includes('what can you')){
-      return `I can answer questions about the GlobalMeasures data. Try:<br>• "What's in jeopardy in 2026?"<br>• "Show me safety measures"<br>• "How is SAIDI trending?"<br>• "Summarize Affordable Service"<br>• "Which goals did we meet in 2025?"`;
-    }
-    // fallback
-    const c={met:0,track:0,jeopardy:0,off:0,nodata:0};rows.forEach(x=>c[x.ev.status.key]++);
-    return `Sorry, I wasn't able to process that request. AI services are currently unavailable or undergoing maintenance. Please try one of the selections above or reach out to the AI & BI Team for assistance.`;
+    /* fall back to loose name matching against the measure list */
+    const words=t.split(/\s+/).filter(w=>w.length>3);
+    let hit=null,score=0;
+    DB.records.forEach(r=>{
+      const nm=r.measure.toLowerCase();
+      let s=0; words.forEach(w=>{if(nm.includes(w))s++;});
+      if(s>score){score=s;hit=r.measure;}
+    });
+    return score>=1?hit:null;
   }
+  function measureCard(m,year){
+    const r=recFor(m,year);
+    if(!r) return `I don't have a <b>${m}</b> record for ${year}. Tracked years run ${DB.years[0]}–${DB.years[DB.years.length-1]}.`;
+    const ev=Engine.evaluate(r);
+    const paceNote=(ev.paceKind==='pace')?` Expected pace by today is about ${Math.round(ev.pace*100)}% of the annual target.`:'';
+    return `<b>${m}</b> (${year})<br>Actual <b>${r.actual??'—'}</b> vs goal <b>${r.goal??'—'}</b> — <span style="color:${ev.status.hex};font-weight:700">${ev.status.label}</span>.${paceNote}`;
+  }
+  function trendTable(m){
+    let h=`<b>${m}</b> across all tracked years:<table><tr><th>Year</th><th>Actual</th><th>Goal</th></tr>`;
+    DB.years.forEach(y=>{const r=recFor(m,y);h+=`<tr><td>${y}</td><td>${r&&r.actual!=null?r.actual:'—'}</td><td>${r?(r.goal??'—'):'—'}</td></tr>`;});
+    return h+'</table>';
+  }
+  function pillarStats(year){
+    return DB.sectionOrder.map(sec=>{
+      const list=measuresIn(sec).map(m=>recFor(m,year)).filter(Boolean).map(r=>({ev:Engine.evaluate(r)}));
+      const c=tally(list),w=list.length-c.nodata;
+      return {sec,w,met:c.met,risk:c.jeopardy+c.off,rate:pct(c.met,w)};
+    }).filter(p=>p.w>0);
+  }
+  function movers(year,cmp){
+    const out=[];
+    DB.sectionOrder.forEach(sec=>measuresIn(sec).forEach(m=>{
+      const a=recFor(m,year),b=recFor(m,cmp);
+      if(!a||!b||a.actual==null||b.actual==null) return;
+      const ea=Engine.evaluate(a),eb=Engine.evaluate(b);
+      if(ea.pct==null||eb.pct==null) return;
+      out.push({sec,m,delta:ea.pct-eb.pct,now:a.actual,then:b.actual});
+    }));
+    return out.sort((a,b)=>b.delta-a.delta);
+  }
+
+  /* =========================================================
+     INTENT LIBRARY — 50 dynamic responses
+     Each intent: {id, keys:[trigger words/phrases], run(ctx)}
+     ctx = {t, year, cmp, rows, pil, measure}
+     ========================================================= */
+  const INTENTS=[
+  /* --- 1-8 : status & scorecard roll-ups --- */
+  {id:'overall',keys:['overall','summary','summarize','overview','how are we doing','status','scorecard','snapshot','recap','state of'],run:c=>{
+    const t2=tally(c.rows),wd=measured(c.rows);
+    return `<b>${c.year} ${c.pil?c.pil:'overall'}:</b> ${t2.met} of ${wd} measured goals met (<b>${pct(t2.met,wd)}%</b>), ${t2.track} tracking to meet, ${t2.jeopardy} in jeopardy, ${t2.off} off track, ${t2.nodata} planned/not yet reporting.${tbl(c.rows,c.year,8)}`;}},
+  {id:'met',keys:['met','achieved','accomplished','hit the goal','made goal','success','wins','goals we met','did we meet','which goals did we meet','green'],run:c=>{
+    const l=c.rows.filter(x=>x.ev.status.key==='met');
+    return `<b>${l.length}</b> goal${l.length===1?'':'s'} met in ${c.year}${c.pil?` for <b>${c.pil}</b>`:''}:${tbl(l,c.year)}`;}},
+  {id:'jeopardy',keys:['jeopardy','jepordy','at risk','risky','concern','worry','warning','amber','orange','watch list','watchlist'],run:c=>{
+    const l=c.rows.filter(x=>x.ev.status.key==='jeopardy');
+    return `<b>${l.length}</b> measure${l.length===1?' is':'s are'} <b>in jeopardy</b> in ${c.year}${c.pil?` for <b>${c.pil}</b>`:''}:${tbl(l,c.year)}`;}},
+  {id:'off',keys:['off track','offtrack','missed','miss','failing','failed','behind','red','not meeting','under target','below target'],run:c=>{
+    const l=c.rows.filter(x=>x.ev.status.key==='off');
+    return `<b>${l.length}</b> measure${l.length===1?' is':'s are'} <b>missed / off track</b> in ${c.year}${c.pil?` for <b>${c.pil}</b>`:''}:${tbl(l,c.year)}`;}},
+  {id:'track',keys:['tracking','on track','ontrack','close to goal','almost there','nearly','in progress'],run:c=>{
+    const l=c.rows.filter(x=>x.ev.status.key==='track');
+    return `<b>${l.length}</b> measure${l.length===1?' is':'s are'} <b>tracking to meet</b> target in ${c.year}:${tbl(l,c.year)}`;}},
+  {id:'nodata',keys:['no data','nodata','planned','not started','future goals','upcoming goals','blank','missing data','gaps'],run:c=>{
+    const l=c.rows.filter(x=>x.ev.status.key==='nodata');
+    return `<b>${l.length}</b> measure${l.length===1?'':'s'} in ${c.year} have no actuals yet — these are planned or still being collected:${tbl(l,c.year)}`;}},
+  {id:'attention',keys:['needs attention','action','action items','priorit','what should i focus','focus on','fix','problem','trouble','issues'],run:c=>{
+    const l=c.rows.filter(x=>x.ev.status.key==='off').concat(c.rows.filter(x=>x.ev.status.key==='jeopardy'));
+    if(!l.length) return `Nothing needs escalation in ${c.year} — every measured goal is met or tracking to meet. 🎉`;
+    return `Prioritize these <b>${l.length}</b> measure${l.length===1?'':'s'} in ${c.year} (off track first, then in jeopardy):${tbl(l,c.year)}`;}},
+  {id:'rate',keys:['attainment','percent met','percentage','success rate','hit rate','how many met','score'],run:c=>{
+    const t2=tally(c.rows),wd=measured(c.rows);
+    return `${c.year} attainment is <b>${pct(t2.met,wd)}%</b> — ${t2.met} met out of ${wd} actively measured goals. Including the ${t2.nodata} planned measure${t2.nodata===1?'':'s'}, the scorecard carries ${c.rows.length} rows this year.`;}},
+
+  /* --- 9-14 : pillar analysis --- */
+  {id:'pillarSummary',keys:['pillar','category','categories','section','strategic areas','breakdown by pillar'],run:c=>{
+    const ps=pillarStats(c.year);
+    let h=`<b>${c.year} by pillar:</b><table><tr><th>Pillar</th><th>Met</th><th>Measured</th><th>Rate</th><th>At risk</th></tr>`;
+    ps.forEach(p=>{h+=`<tr><td>${p.sec}</td><td>${p.met}</td><td>${p.w}</td><td>${p.rate}%</td><td>${p.risk}</td></tr>`;});
+    return h+'</table>';}},
+  {id:'bestPillar',keys:['best pillar','strongest','doing well','top performing','leading pillar','winner'],run:c=>{
+    const b=pillarStats(c.year).sort((x,y)=>y.rate-x.rate||y.w-x.w)[0];
+    return b?`The strongest pillar in ${c.year} is <b>${b.sec}</b> — ${b.met} of ${b.w} measured goals met (${b.rate}%).`:`No measured pillars in ${c.year} yet.`;}},
+  {id:'worstPillar',keys:['worst pillar','weakest','most exposure','struggling','lagging','biggest problem area'],run:c=>{
+    const w=pillarStats(c.year).sort((x,y)=>y.risk-x.risk||x.rate-y.rate)[0];
+    return w?`<b>${w.sec}</b> carries the most exposure in ${c.year} — ${w.risk} measure${w.risk===1?'':'s'} in jeopardy or off track, ${w.rate}% attainment.`:`No measured pillars in ${c.year} yet.`;}},
+  {id:'listPillars',keys:['list pillars','what pillars','which pillars','name the pillars','five pillars','strategic plan','how is this organized','structure'],run:c=>
+    `PVREA's scorecard is organized into ${DB.sectionOrder.length} strategic pillars:<br>• ${DB.sectionOrder.join('<br>• ')}<br>Ask me to summarize any one of them.`},
+  {id:'pillarDetail',keys:['show me','tell me about','detail','deep dive','drill'],run:c=>{
+    if(!c.pil) return null;
+    const t2=tally(c.rows);
+    return `<b>${c.pil}</b> in ${c.year}: ${t2.met} met, ${t2.track} tracking, ${t2.jeopardy} in jeopardy, ${t2.off} off track.${tbl(c.rows,c.year)}`;}},
+  {id:'compareP',keys:['compare pillars','rank pillars','rank the pillars','which pillar is better','pillar ranking','order the pillars'],run:c=>{
+    const ps=pillarStats(c.year).sort((a,b)=>b.rate-a.rate);
+    return `Pillar ranking for ${c.year} by attainment:<br>`+ps.map((p,i)=>`${i+1}. <b>${p.sec}</b> — ${p.rate}% (${p.met}/${p.w})`).join('<br>');}},
+
+  /* --- 15-22 : measures, trends, comparisons --- */
+  {id:'measureLookup',keys:['what is the value','current value','how did we do on','number for','result for','actual'],run:c=>c.measure?measureCard(c.measure,c.year):null},
+  {id:'trend',keys:['trend','trending','over time','history','historical','year over year','yoy','trajectory','progression'],run:c=>{
+    if(c.measure) return trendTable(c.measure);
+    const yrs=DB.years.filter(y=>allRows(y).some(x=>x.r.actual!=null));
+    let h=`<b>Attainment by year:</b><table><tr><th>Year</th><th>Met</th><th>Measured</th><th>Rate</th></tr>`;
+    yrs.forEach(y=>{const r=allRows(y),t2=tally(r),wd=measured(r);h+=`<tr><td>${y}</td><td>${t2.met}</td><td>${wd}</td><td>${pct(t2.met,wd)}%</td></tr>`;});
+    return h+'</table>';}},
+  {id:'goalFor',keys:['goal for','target for','targets','what are we aiming','threshold','benchmark','objective','what is the goal'],run:c=>{
+    if(c.measure){
+      let h=`Targets for <b>${c.measure}</b>:<table><tr><th>Year</th><th>Goal</th><th>Actual</th></tr>`;
+      DB.years.forEach(y=>{const r=recFor(c.measure,y);if(r)h+=`<tr><td>${y}</td><td>${r.goal??'—'}</td><td>${r.actual??'—'}</td></tr>`;});
+      return h+'</table>';
+    }
+    return `Goals in ${c.year}${c.pil?` for <b>${c.pil}</b>`:''}:${tbl(c.rows,c.year,10)}`;}},
+  {id:'compareYears',keys:['vs','versus','compared to','difference between','change from','better than last year','worse than'],run:c=>{
+    const ys=yearsInText(c.t);
+    const a=ys[0]??c.year, b=ys[1]??c.cmp;
+    const ra=allRows(a),rb=allRows(b),ta=tally(ra),tb=tally(rb);
+    const pa=pct(ta.met,measured(ra)),pb=pct(tb.met,measured(rb));
+    const d=pa-pb;
+    return `<b>${a} vs ${b}:</b> attainment ${d>0?`improved <b>${d} pts</b>`:d<0?`declined <b>${Math.abs(d)} pts</b>`:'was flat'} (${pa}% vs ${pb}%). ${a}: ${ta.met} met / ${ta.jeopardy+ta.off} at risk. ${b}: ${tb.met} met / ${tb.jeopardy+tb.off} at risk.`;}},
+  {id:'gain',keys:['biggest gain','most improved','improvement','improved the most','best mover','biggest jump'],run:c=>{
+    const m=movers(c.year,c.cmp)[0];
+    return m?`Biggest gain vs ${c.cmp}: <b>${m.m}</b> (${c.pil||m.sec}) moved from <b>${m.then}</b> to <b>${m.now}</b>.`:`I don't have enough paired actuals between ${c.cmp} and ${c.year} to rank movers.`;}},
+  {id:'slide',keys:['biggest drop','declined','worsened','largest slide','regression','went down','slipped'],run:c=>{
+    const list=movers(c.year,c.cmp);const m=list[list.length-1];
+    return m&&m.delta<0?`Largest slide vs ${c.cmp}: <b>${m.m}</b> (${m.sec}) fell from <b>${m.then}</b> to <b>${m.now}</b>.`:`Nothing declined materially versus ${c.cmp}.`;}},
+  {id:'forecast',keys:['forecast','future','projection','next year','2027 goals','out years','long term','roadmap'],run:c=>{
+    const explicit=yearsInText(c.t)[0];
+    const fy=explicit??Math.max(c.year+1,new Date().getFullYear()+1);
+    const rows=allRows(fy);
+    if(!rows.length) return `I don't have ${fy} targets loaded. Tracked years run ${DB.years[0]}–${DB.years[DB.years.length-1]}.`;
+    return `Targets already set for <b>${fy}</b> (${rows.length} measures). Note these are plan values — actuals are not reported yet:${tbl(rows,fy,10)}`;}},
+  {id:'listMeasures',keys:['list measures','all measures','what do you track','which measures','every measure','measure list'],run:c=>{
+    const names=[...new Set(DB.records.map(r=>r.measure))];
+    return `I track <b>${names.length}</b> distinct measures across ${DB.sectionOrder.length} pillars and ${DB.years.length} years (${DB.records.length} rows total):<br>• ${names.slice(0,20).join('<br>• ')}${names.length>20?`<br>…and ${names.length-20} more.`:''}`;}},
+
+  /* --- 23-30 : safety / member / affordability / reliability shortcuts --- */
+  {id:'safetyQ',keys:['injuries','safety record','dart rate','accidents','osha','near miss'],run:c=>{
+    const rows=allRows(c.year).filter(x=>x.sec==='Top Safety Performance');
+    return `<b>Top Safety Performance — ${c.year}</b>${tbl(rows,c.year)}`;}},
+  {id:'reliability',keys:['reliability','outages','interruptions','minutes out','power quality','lights'],run:c=>{
+    const l=allRows(c.year).filter(x=>/SAIDI|CEMI|Interruption/i.test(x.m));
+    return `Reliability measures in ${c.year}:${tbl(l,c.year)}`;}},
+  {id:'carbonQ',keys:['carbon','clean energy','renewable','emissions','green energy','decarbon'],run:c=>measureCard('Carbon Free Generation',c.year)},
+  {id:'vppQ',keys:['virtual power plant','vpp','demand response','thermostat','battery','dispatchable'],run:c=>{
+    const rec=DB.records.find(r=>/Virtual Power Plant/i.test(r.measure));
+    return rec?measureCard(rec.measure,c.year):null;}},
+  {id:'memberQ',keys:['member satisfaction','satisfaction score','how happy','loyalty','advocates','survey score'],run:c=>{
+    const rows=allRows(c.year).filter(x=>x.sec==='Exceptional Member Experience');
+    return `<b>Exceptional Member Experience — ${c.year}</b>${tbl(rows,c.year)}`;}},
+  {id:'affordQ',keys:['rates','bills','power cost','expenses','affordability','cheap','competitive'],run:c=>{
+    const rows=allRows(c.year).filter(x=>x.sec==='Affordable Service');
+    return `<b>Affordable Service — ${c.year}</b>${tbl(rows,c.year)}`;}},
+  {id:'cultureQ',keys:['employees','staff','training','wellness','career development','retention','engagement'],run:c=>{
+    const rows=allRows(c.year).filter(x=>x.sec==='High Performance Culture');
+    return `<b>High Performance Culture — ${c.year}</b>${tbl(rows,c.year)}`;}},
+  {id:'securityQ',keys:['cyber','security awareness','phishing','it security','proficiency'],run:c=>{
+    const rec=DB.records.find(r=>/Security Awareness/i.test(r.measure));
+    return rec?measureCard(rec.measure,c.year):null;}},
+
+  /* --- 31-38 : how the dashboard works --- */
+  {id:'howStatus',keys:['how is status','how do you calculate','methodology','logic','rules','how is it scored','color coding','why is this red'],run:c=>
+    `Status is calculated live from actual vs goal:<br>• <b style="color:#008457">Goal Met</b> — target achieved.<br>• <b style="color:#00A8CD">Tracking to Meet</b> — within ~10% of target (or ≥95% of expected pace).<br>• <b style="color:#F8991D">In Jeopardy</b> — 75–90% of target.<br>• <b style="color:#D73647">Missed / Off Track</b> — below 75%.<br>• <b style="color:#808285">No Data / Planned</b> — no actual reported yet.<br>Direction is inferred from the goal operator (≥, ≤, &lt;, &gt;), so lower-is-better measures like SAIDI and DART are scored in reverse.`},
+  {id:'pace',keys:['tick','pace','expected pace','vertical line','marker','prorated','pro rata','mid-year'],run:c=>
+    `The ┃ tick on each progress bar is the reference line. For cumulative counts still in progress this year (inspections, presentations, advocates) it shows the share of the annual target you'd expect by today's date; for every other measure it marks the 100% goal line.`},
+  {id:'dataSource',keys:['where does the data','data source','database','sql','table','refresh','how current','last updated','stale'],run:c=>
+    `Everything here comes from <b>Azure SQL · dbo.GlobalMeasures</b>, injected by the Flask app at page load (currently ${DB.records.length} rows, ${DB.years[0]}–${DB.years[DB.years.length-1]}). Use <b>↻ Refresh live data</b> in the header to re-query <code>/api/measures</code> without reloading the page.`},
+  {id:'reports',keys:['report','pdf','print','export','download','one page','executive report','share with the board'],run:c=>
+    `Five printable reports are available in the header, and each one respects your current year, comparison, status and pillar selections:<br>• <b>Executive Report</b> — full narrative + status groupings<br>• <b>One-Page</b> — at-a-glance scorecard<br>• <b>Concerns</b> — jeopardy and off-track only<br>• <b>Pillar Scorecard</b> — pillar-by-pillar detail<br>• <b>Year-over-Year</b> — every measure across all years`},
+  {id:'filters',keys:['filter','chip','dropdown','slicer','how do i change the year','controls','narrow down'],run:c=>
+    `Use the control bar: <b>Year</b> sets the reporting year, <b>Compare</b> picks the benchmark year (defaults to prior year), <b>Status</b> narrows to a single status, and the colored <b>pillar chips</b> toggle pillars on and off. Reports and the dashboard both follow those selections.`},
+  {id:'legend',keys:['legend','what do the colors mean','key','symbols'],run:c=>
+    `Legend: <b style="color:#008457">green</b> = goal met, <b style="color:#00A8CD">light blue</b> = tracking to meet, <b style="color:#F8991D">gold</b> = in jeopardy, <b style="color:#D73647">red</b> = missed/off track, <b style="color:#808285">gray</b> = planned or no data. Pillar header colors follow the PVREA Brand Standards Guide.`},
+  {id:'years',keys:['what years','date range','how far back','coverage','time period','tracked years'],run:c=>
+    `The scorecard covers <b>${DB.years[0]}–${DB.years[DB.years.length-1]}</b>. The most recent year with reported actuals is <b>${latestDataYear()}</b>; later years hold approved targets only.`},
+  {id:'counts',keys:['how many records','row count','how much data','size','total measures'],run:c=>{
+    const names=[...new Set(DB.records.map(r=>r.measure))];
+    return `Currently loaded: <b>${DB.records.length}</b> records, <b>${names.length}</b> distinct measures, <b>${DB.sectionOrder.length}</b> pillars, <b>${DB.years.length}</b> years.`;}},
+
+  /* --- 39-44 : glossary & definitions --- */
+  {id:'define',keys:['what does','stand for','definition','define','meaning','acronym','abbreviation','what is a'],run:c=>{
+    for(const k in GLOSSARY){if(c.t.includes(k))return GLOSSARY[k];}
+    if(c.measure) return `<b>${c.measure}</b> is tracked under ${DB.records.find(r=>r.measure===c.measure).section}. ${measureCard(c.measure,c.year)}`;
+    return `I can define SAIDI, CEMI-3, DART, RESAP, ACSI, VPP and QFO — just name the acronym.`;}},
+  {id:'saidiDef',keys:['saidi mean','what is saidi'],run:c=>GLOSSARY.saidi},
+  {id:'cemiDef',keys:['cemi mean','what is cemi','cemi-3'],run:c=>GLOSSARY.cemi},
+  {id:'dartDef',keys:['dart mean','what is dart'],run:c=>GLOSSARY.dart},
+  {id:'resapDef',keys:['resap mean','what is resap'],run:c=>GLOSSARY.resap},
+  {id:'acsiDef',keys:['acsi mean','what is acsi'],run:c=>GLOSSARY.acsi},
+
+  /* --- 45-50 : conversational & service --- */
+  {id:'help',keys:['help','what can you do','capabilities','options','commands','how do i use you','examples'],run:c=>
+    `I read the live Global Measures data and answer in plain language. Try:<br>• "How are we doing overall?"<br>• "What's in jeopardy in ${c.year}?"<br>• "How is SAIDI trending?"<br>• "Summarize Affordable Service"<br>• "Compare 2026 vs 2025"<br>• "What does CEMI-3 mean?"<br>• "Which pillar is strongest?"<br>• "How is status calculated?"`},
+  {id:'who',keys:['who are you','your name','flash','what are you','are you ai','bot','chatgpt','copilot'],run:c=>
+    `I'm <b>Flash the Fact Finder</b> ⚡ — PVREA's scorecard guide. I don't call an external AI service; I reason directly over the ${DB.records.length} rows of Global Measures data loaded in this page, so my answers always match what you see on screen.`},
+  {id:'greeting',keys:['hi','hello','hey','good morning','good afternoon','howdy','yo','greetings'],run:c=>
+    `Hey there! ⚡ Ask me about any pillar, measure, status or year — or tap one of the suggestions below to get rolling.`},
+  {id:'thanks',keys:['thanks','thank you','appreciate','awesome','great job','nice','perfect','helpful'],run:c=>
+    `Happy to help! ⚡ Ask me anything else about the ${c.year} scorecard.`},
+  {id:'bye',keys:['bye','goodbye','see ya','later','done','that\'s all','close'],run:c=>
+    `Catch you later! Click the ⚡ button any time to reopen me.`},
+  {id:'contact',keys:['who do i contact','support','question about the data','wrong','incorrect','error','bug','update the data','change a value'],run:c=>
+    `For data corrections or dashboard changes, contact the <b>AI &amp; BI Team</b> — measure owners submit updates through the AI &amp; BI Help Desk and they flow into dbo.GlobalMeasures on the next refresh. If a number looks wrong here, it almost always means the source row needs updating.`}
+  ];
+
+  /* =========================================================
+     FUZZY MATCHER
+     Scores every intent on: exact phrase hit, token overlap,
+     and Levenshtein-tolerant near-miss (handles typos).
+     ========================================================= */
+  function lev(a,b){
+    if(a===b) return 0;
+    const m=a.length,n=b.length;
+    if(!m||!n) return Math.max(m,n);
+    let prev=Array.from({length:n+1},(_,i)=>i),cur=new Array(n+1);
+    for(let i=1;i<=m;i++){
+      cur[0]=i;
+      for(let j=1;j<=n;j++){
+        cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+      }
+      prev=cur.slice();
+    }
+    return prev[n];
+  }
+  function fuzzyHit(token,key){
+    if(token===key) return 1;
+    if(key.length>3&&token.length>3&&(token.startsWith(key)||key.startsWith(token))) return .85;
+    const tol=key.length>7?2:key.length>4?1:0;
+    if(tol&&Math.abs(token.length-key.length)<=tol&&lev(token,key)<=tol) return .7;
+    return 0;
+  }
+  const STOP=new Set(['the','a','an','of','in','on','for','to','is','are','we','our','what','how','me','my','and','do','does','did','was','were','it','this','that','you','can','please','show','tell','give','about','with','any','all','be','been','i']);
+  function score(t,tokens,intent){
+    let s=0;
+    intent.keys.forEach(k=>{
+      const key=k.toLowerCase();
+      if(key.includes(' ')){                       // multi-word phrase
+        if(t.includes(key)) s+=key.split(' ').length*2.2;
+        return;
+      }
+      if(t.includes(key)) s+=1.2;                  // substring hit
+      tokens.forEach(tok=>{ s+=fuzzyHit(tok,key)*1.1; });
+    });
+    return s;
+  }
+
+  /* ---------- graceful, data-driven fallback (never "unavailable") ---------- */
+  function fallback(c){
+    const t2=tally(c.rows),wd=measured(c.rows);
+    const risk=c.rows.filter(x=>x.ev.status.key==='off'||x.ev.status.key==='jeopardy').slice(0,3).map(x=>x.m);
+    return `I'm not certain what you're after, so here's the quick picture for <b>${c.year}</b>: ${t2.met} of ${wd} measured goals met (${pct(t2.met,wd)}%), ${t2.track} tracking, ${t2.jeopardy+t2.off} needing attention${risk.length?` — notably ${risk.join(', ')}`:''}.<br><br>Try rephrasing with a pillar ("safety", "affordable service"), a measure ("SAIDI", "DART", "ACSI"), a status ("in jeopardy", "met"), or a year ("2025 vs 2026"). Type <b>help</b> for the full list of things I can do.`;
+  }
+
+  /* ---------- main answer router ---------- */
+  function answer(q){
+    const t=' '+q.toLowerCase().replace(/[^\w\s%-]/g,' ').replace(/\s+/g,' ').trim()+' ';
+    const tokens=t.split(' ').filter(w=>w&&!STOP.has(w));
+    const year=yearFromText(t), cmp=(yearsInText(t)[1]??App.compareYear());
+    const pil=pillarMatch(t);
+    let rows=allRows(year);
+    if(pil) rows=rows.filter(x=>x.sec===pil);
+    const ctx={t,q,year,cmp,rows,pil,measure:measureByAlias(t)};
+
+    /* rank every intent, then run the best one that returns content */
+    const ranked=INTENTS.map(i=>({i,s:score(t,tokens,i)})).sort((a,b)=>b.s-a.s);
+    for(const r of ranked){
+      if(r.s<1.0) break;
+      try{ const out=r.i.run(ctx); if(out) return out; }catch(e){ /* try the next intent */ }
+    }
+    /* second chance: a recognized measure or pillar alone is enough to answer */
+    if(ctx.measure) return measureCard(ctx.measure,year);
+    if(pil){
+      const t2=tally(rows);
+      return `<b>${pil}</b> in ${year}: ${t2.met} met, ${t2.track} tracking, ${t2.jeopardy} in jeopardy, ${t2.off} off track.${tbl(rows,year)}`;
+    }
+    return fallback(ctx);
+  }
+
   function send(){const i=document.getElementById('chatInput');const q=i.value.trim();if(!q)return;add(q,'user');i.value='';setTimeout(()=>add(answer(q),'bot'),200);}
   function init(){
-    add(`Hi there! ⚡ I'm Flash the Fact Finder. I'm here to help you quickly find information, explore data, answer questions, and connect you with the insights you need. What would you like to know today?`,'bot');
+    add(`Hi there! ⚡ I'm <b>Flash the Fact Finder</b>. I'm here to help you quickly find information, explore data, answer questions, and connect you with the insights you need. What would you like to know today?`,'bot');
     const s=document.getElementById('chatSuggest');
     suggestions.forEach(q=>{const b=document.createElement('button');b.textContent=q;b.onclick=()=>{document.getElementById('chatInput').value=q;send();};s.appendChild(b);});
   }
-  return {toggle,send,init};
+  return {toggle,send,init,answer};
 })();
 
 /* ============ AZURE SQL DATA SOURCE (via Flask) ============ */
