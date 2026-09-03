@@ -853,11 +853,11 @@ const Chat=(function(){
     }
     // fallback
     const c={met:0,track:0,jeopardy:0,off:0,nodata:0};rows.forEach(x=>c[x.ev.status.key]++);
-    return `I looked at <b>${year}</b> across all pillars: ${c.met} met, ${c.track} tracking, ${c.jeopardy} in jeopardy, ${c.off} off track. Try naming a pillar (safety, member, affordable, utility, culture), a status ("in jeopardy"), or a measure ("SAIDI").`;
+    return `Sorry, I wasn't able to process that request. AI services are currently unavailable or undergoing maintenance. Please try one of the selections above or reach out to the AI & BI Team for assistance.`;
   }
   function send(){const i=document.getElementById('chatInput');const q=i.value.trim();if(!q)return;add(q,'user');i.value='';setTimeout(()=>add(answer(q),'bot'),200);}
   function init(){
-    add(`Hi Scott 👋 I'm your Measures Assistant. I can interrogate the live GlobalMeasures data — filter by pillar, status, year, or ask about a specific measure. What would you like to know?`,'bot');
+    add(`Hi there! ⚡ I'm Flash the Fact Finder. I'm here to help you quickly find information, explore data, answer questions, and connect you with the insights you need. What would you like to know today?`,'bot');
     const s=document.getElementById('chatSuggest');
     suggestions.forEach(q=>{const b=document.createElement('button');b.textContent=q;b.onclick=()=>{document.getElementById('chatInput').value=q;send();};s.appendChild(b);});
   }
